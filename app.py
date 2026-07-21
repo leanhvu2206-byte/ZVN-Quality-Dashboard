@@ -44,7 +44,7 @@ BG = "#F2F5FA"
 BORDER = "#C8D3E1"
 
 st.markdown(
-    f"""
+    """
 <style>
 /* ---------- Page ---------- */
 html, body, [class*="css"] {{font-family: Arial, Helvetica, sans-serif;}}
