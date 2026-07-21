@@ -93,7 +93,7 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 .kpi-icon {{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{NAVY};color:white;font-size:30px;margin-right:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.13);}}
 .kpi-label {{font-size:13px;font-weight:900;color:#101828;letter-spacing:.2px;white-space:nowrap;}}
 .kpi-value {{font-size:clamp(26px,2.3vw,38px);font-weight:900;line-height:1.08;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}}
-.kpi.top-vendor .kpi-value {{font-size:clamp(18px,1.55vw,25px);line-height:1.12;white-space:normal;overflow:visible;text-overflow:clip;max-width:220px;overflow-wrap:anywhere;word-break:normal;}}
+.kpi.top-vendor .kpi-value, .kpi.top-item .kpi-value {{font-size:clamp(18px,1.55vw,25px);line-height:1.12;white-space:normal;overflow:visible;text-overflow:clip;max-width:220px;overflow-wrap:anywhere;word-break:normal;}}
 .kpi.top-vendor {{padding-left:14px;padding-right:14px;}}
 .kpi-unit {{font-size:12px;color:#17243A;font-weight:700;margin-top:3px;}}
 
@@ -967,11 +967,11 @@ kpis = [
     ("📦", "OUTPUT", number(received), "PCS", NAVY),
     ("✓", "DEFECT RATE", pct(reject_rate), "Rejected / Output", RED),
     ("🏢", "TOP VENDOR", display_vendor_name(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
-    ("📅", "TOP INSPECTION DAY", safe(top_day), "Date", NAVY),
+    ("📦", "TOP DEFECTIVE ITEM", safe(top_item), f"{number(top_item_qty)} rejected pcs", NAVY),
 ]
 kpi_html = '<div class="kpi-row">'
 for icon, label, value, unit, color in kpis:
-    extra_class = ' top-vendor' if label == 'TOP VENDOR' else ''
+    extra_class = ' top-vendor' if label == 'TOP VENDOR' else (' top-item' if label == 'TOP DEFECTIVE ITEM' else '')
     kpi_html += (
         f'<div class="kpi{extra_class}">'
         f'<div class="kpi-icon">{icon}</div>'
@@ -1003,9 +1003,9 @@ with left:
         name="Output (pcs)",
         marker=dict(color=NAVY, line=dict(color=NAVY_DARK, width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Output"]],
-        textposition="inside",
-        insidetextanchor="end",
-        textfont=dict(size=16, color="white", family="Arial Black"),
+        textposition="outside",
+        cliponaxis=False,
+        textfont=dict(size=16, color=TEXT, family="Arial Black"),
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
@@ -1028,7 +1028,7 @@ with left:
             line=dict(color=ORANGE, width=4),
             marker=dict(color=ORANGE, size=10, line=dict(color="white", width=1.5)),
             text=[f"{x:.2f}%" for x in monthly["Defect Rate"]],
-            textposition="top center",
+            textposition="top left",
             textfont=dict(size=16, color=RED, family="Arial Black"),
             hovertemplate="%{x}<br>Defect rate: %{y:.2f}%<extra></extra>",
         )
@@ -1040,7 +1040,7 @@ with left:
         legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0, font=dict(size=17, color=TEXT, family="Arial Black")),
         uniformtext_minsize=13,
         uniformtext_mode="show",
-        yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black")),
+        yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black"), range=[0, max(float(monthly["Output"].max()) * 1.20, 1)]),
         yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
     )
     month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Month Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text="Month", font=dict(size=18, color=TEXT, family="Arial Black")))
@@ -1125,7 +1125,7 @@ insight_html = f"""
 <div class="insights">
   <div class="insight-head"><div class="insight-bulb">💡</div><div>KEY QUALITY<br>INSIGHTS</div></div>
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">{safe(trend_label)}</span><b>{safe(trend_value)}</b><span class="insight-note">{safe(trend_note)}</span></div></div>
-  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top inspection day</span><b>{safe(top_day)}</b><span class="insight-note">{number(top_day_qty)} rejected pcs</span></div></div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top defective item</span><b>{safe(top_item)}</b><span class="insight-note">{number(top_item_qty)} rejected pcs</span></div></div>
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top vendor</span><b>{safe(top_vendor)}</b><span class="insight-note">{number(top_vendor_qty)} rejected pcs</span></div></div>
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top item / defect</span><b>{safe(top_item)}</b><span class="insight-note">{safe(top_defect)}</span></div></div>
 </div>
@@ -1198,11 +1198,11 @@ full_metrics = [
     ("Approved", number(approved), GREEN),
     ("Rejected", number(rejected), RED),
     ("Reject Rate", pct(reject_rate), ORANGE),
-    ("Top Vendor", top_vendor, PURPLE),
+    ("Top Defective Item", top_item, PURPLE),
 ]
 full_insights = [
     f"Top vendor: {top_vendor} — {number(top_vendor_qty)} rejected pcs",
-    f"Top inspection day: {top_day} — {number(top_day_qty)} rejected pcs",
+    f"Top defective item: {top_item} — {number(top_item_qty)} rejected pcs",
     f"Top item: {top_item} — {number(top_item_qty)} rejected pcs",
     f"Top defect: {top_defect} — {number(top_defect_qty)} rejected pcs",
 ]
