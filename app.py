@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import io
 import re
+import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Iterable
@@ -10,6 +11,12 @@ from typing import Iterable
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import Image as RLImage, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 st.set_page_config(
     page_title="IQC Quality Dashboard",
@@ -83,8 +90,16 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 
 /* ---------- Chart cards ---------- */
 .chart-card {{background:white;border:1.2px solid {BORDER};border-radius:12px;padding:10px 12px 7px;box-shadow:0 4px 14px rgba(15,40,80,.09);}}
-.chart-title {{display:inline-block;background:linear-gradient(90deg,{NAVY_DARK},{NAVY_MID});color:white;padding:7px 20px;border-radius:7px;font-size:14px;font-weight:900;letter-spacing:.25px;margin:0 0 5px 10px;min-width:220px;text-align:center;}}
+.chart-title {{display:inline-block;background:linear-gradient(90deg,{NAVY_DARK},{NAVY_MID});color:white;padding:7px 20px;border-radius:7px;font-size:16px;font-weight:900;letter-spacing:.25px;margin:0 0 5px 10px;min-width:220px;text-align:center;}}
 div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;}}
+
+
+/* ---------- Plotly chart typography ---------- */
+div[data-testid="stPlotlyChart"] .main-svg text {
+    font-family: Arial Black, Arial, Helvetica, sans-serif !important;
+    font-weight: 800 !important;
+    fill: #0A2147 !important;
+}
 
 /* ---------- Insight strip ---------- */
 .insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF7D7,#FFF1B9);border:1px solid #F0D77A;border-radius:12px;margin:8px 0;padding:12px 14px;box-shadow:0 2px 7px rgba(120,90,0,.06);}}
@@ -277,13 +292,13 @@ def layout(fig: go.Figure, height: int, margins: dict | None = None) -> go.Figur
         margin=margins or dict(l=32, r=18, t=22, b=30),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="white",
-        font=dict(family="Arial", color=TEXT, size=14),
-        hoverlabel=dict(bgcolor="white", font_size=14, font_family="Arial"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=13, color=TEXT)),
+        font=dict(family="Arial Black", color=TEXT, size=16),
+        hoverlabel=dict(bgcolor="white", font_size=16, font_family="Arial Black"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.04, xanchor="left", x=0, font=dict(size=15, color=TEXT, family="Arial Black")),
         bargap=0.32,
     )
-    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="#AEBBCD", linewidth=1.2, tickfont=dict(size=13, color=TEXT, family="Arial"), title_font=dict(size=14, color=TEXT))
-    fig.update_yaxes(gridcolor=GRID, gridwidth=1, zeroline=False, tickfont=dict(size=13, color=TEXT, family="Arial"), title_font=dict(size=14, color=TEXT))
+    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="#AEBBCD", linewidth=1.2, tickfont=dict(size=15, color=TEXT, family="Arial Black"), title_font=dict(size=16, color=TEXT, family="Arial Black"))
+    fig.update_yaxes(gridcolor=GRID, gridwidth=1, zeroline=False, tickfont=dict(size=15, color=TEXT, family="Arial Black"), title_font=dict(size=16, color=TEXT, family="Arial Black"))
     return fig
 
 
@@ -309,15 +324,117 @@ def bar_chart(series: pd.Series, color: str, total: float) -> go.Figure:
             text=labels,
             textposition="outside",
             cliponaxis=False,
-            textfont=dict(size=13, color=TEXT, family="Arial Black"),
+            textfont=dict(size=18, color=TEXT, family="Arial Black"),
             hovertemplate="%{y}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
-    layout(fig, 365, dict(l=28, r=125, t=15, b=50))
+    layout(fig, 470, dict(l=70, r=180, t=26, b=70))
     fig.update_layout(showlegend=False)
-    fig.update_xaxes(title=dict(text="PCS", font=dict(size=14, color=TEXT)), rangemode="tozero", tickfont=dict(size=13, color=TEXT))
-    fig.update_yaxes(automargin=True, tickfont=dict(size=13.5, color=TEXT, family="Arial"))
+    fig.update_xaxes(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black"))
+    fig.update_yaxes(automargin=True, tickfont=dict(size=18, color=TEXT, family="Arial Black"))
     return fig
+
+
+def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
+    """Render a Plotly figure as a high-resolution PNG using Kaleido."""
+    return fig.to_image(format="png", width=width, height=height, scale=2)
+
+
+def build_png_zip(figures: list[tuple[str, go.Figure]]) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for filename, fig in figures:
+            archive.writestr(filename, figure_png(fig))
+    return buffer.getvalue()
+
+
+def build_pdf_report(
+    report_month: str,
+    source: str,
+    metrics: list[tuple[str, str]],
+    insights: list[str],
+    figures: list[tuple[str, go.Figure]],
+) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=10 * mm,
+        bottomMargin=10 * mm,
+        title=f"IQC Quality Dashboard {report_month}",
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "DashboardTitle", parent=styles["Title"], fontName="Helvetica-Bold",
+        fontSize=22, leading=26, textColor=colors.HexColor(NAVY_DARK), spaceAfter=8
+    )
+    small = ParagraphStyle(
+        "Small", parent=styles["BodyText"], fontName="Helvetica", fontSize=9,
+        leading=12, textColor=colors.HexColor(TEXT)
+    )
+    insight_style = ParagraphStyle(
+        "Insight", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=10,
+        leading=13, textColor=colors.HexColor(TEXT)
+    )
+    story = [Paragraph("IQC QUALITY DASHBOARD", title_style), Paragraph(f"Month: {report_month} &nbsp;&nbsp; Source: {safe(source)}", small), Spacer(1, 4 * mm)]
+
+    metric_cells = []
+    for label, value in metrics:
+        metric_cells.append(Paragraph(f"<b>{safe(label)}</b><br/><font size='16'>{safe(value)}</font>", small))
+    metric_table = Table([metric_cells], colWidths=[52 * mm] * len(metric_cells))
+    metric_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor(BORDER)),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor(BORDER)),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.extend([metric_table, Spacer(1, 4 * mm)])
+
+    insight_cells = [Paragraph(f"• {safe(text)}", insight_style) for text in insights]
+    insight_table = Table([insight_cells], colWidths=[65 * mm] * len(insight_cells))
+    insight_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF4C8")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#E8C85D")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E8C85D")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+    ]))
+    story.extend([insight_table, Spacer(1, 5 * mm)])
+
+    # Two charts per landscape page.
+    chart_cells = []
+    for chart_name, fig in figures:
+        image_bytes = io.BytesIO(figure_png(fig, 1300, 720))
+        chart = RLImage(image_bytes, width=128 * mm, height=70 * mm)
+        chart_cells.append([Paragraph(f"<b>{safe(chart_name)}</b>", small), chart])
+
+    for index in range(0, len(chart_cells), 2):
+        pair = chart_cells[index:index + 2]
+        titles = [cell[0] for cell in pair]
+        images = [cell[1] for cell in pair]
+        if len(pair) == 1:
+            titles.append(Paragraph("", small)); images.append(Spacer(1, 1))
+        table = Table([titles, images], colWidths=[135 * mm, 135 * mm])
+        table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(BORDER)),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor(BORDER)),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(table)
+        if index + 2 < len(chart_cells):
+            story.append(PageBreak())
+
+    doc.build(story)
+    return buffer.getvalue()
 
 
 # ============================================================
@@ -426,7 +543,7 @@ kpis = [
     ("📋", "TOTAL DEFECT", number(rejected), "PCS", RED),
     ("📦", "OUTPUT", number(received), "PCS", NAVY),
     ("✓", "DEFECT RATE", pct(reject_rate), "Rejected / Output", RED),
-    ("📈", "TOP LINE", safe(top_line), "Line", NAVY),
+    ("🏢", "TOP VENDOR", safe(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
     ("📅", "TOP INSPECTION DAY", safe(top_day), "Date", NAVY),
 ]
 kpi_html = '<div class="kpi-row">'
@@ -453,31 +570,32 @@ with left:
     monthly = df.groupby("Year-Month").agg(Output=(c["received"], "sum"), Defect=(c["rejected"], "sum")).sort_index()
     monthly = monthly.tail(7)
     monthly["Defect Rate"] = (monthly["Defect"] / monthly["Output"].replace(0, pd.NA) * 100).fillna(0)
+    monthly["Month Label"] = [pd.Period(x, freq="M").strftime("%b %Y") for x in monthly.index]
 
     month_fig = go.Figure()
     month_fig.add_bar(
-        x=monthly.index,
+        x=monthly["Month Label"],
         y=monthly["Output"],
         name="Output (pcs)",
         marker=dict(color=NAVY, line=dict(color=NAVY_DARK, width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Output"]],
         textposition="outside",
-        textfont=dict(size=12, color=TEXT, family="Arial Black"),
+        textfont=dict(size=17, color=TEXT, family="Arial Black"),
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
-        x=monthly.index,
+        x=monthly["Month Label"],
         y=monthly["Defect"],
         name="Defect (pcs)",
         marker=dict(color=RED, line=dict(color="#B42318", width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Defect"]],
         textposition="outside",
-        textfont=dict(size=12, color=RED, family="Arial Black"),
+        textfont=dict(size=17, color=RED, family="Arial Black"),
         hovertemplate="%{x}<br>Defect: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_trace(
         go.Scatter(
-            x=monthly.index,
+            x=monthly["Month Label"],
             y=monthly["Defect Rate"],
             yaxis="y2",
             name="Defect Rate (%)",
@@ -486,17 +604,20 @@ with left:
             marker=dict(color=ORANGE, size=10, line=dict(color="white", width=1.5)),
             text=[f"{x:.2f}%" for x in monthly["Defect Rate"]],
             textposition="top center",
-            textfont=dict(size=12, color=RED, family="Arial Black"),
+            textfont=dict(size=17, color=RED, family="Arial Black"),
             hovertemplate="%{x}<br>Defect rate: %{y:.2f}%<extra></extra>",
         )
     )
-    layout(month_fig, 390, dict(l=68, r=68, t=50, b=55))
+    layout(month_fig, 500, dict(l=92, r=92, t=80, b=82))
     month_fig.update_layout(
         barmode="group",
-        yaxis=dict(title=dict(text="PCS", font=dict(size=14, color=TEXT)), gridcolor=GRID, tickfont=dict(size=13, color=TEXT)),
-        yaxis2=dict(title=dict(text="%", font=dict(size=14, color=TEXT)), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=13, color=TEXT)),
+        font=dict(family="Arial Black", size=18, color=TEXT),
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, font=dict(size=17, color=TEXT, family="Arial Black")),
+        yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black")),
+        yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
     )
-    st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False})
+    month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Month Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text="Month", font=dict(size=18, color=TEXT, family="Arial Black")))
+    st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
     st.markdown('</div>', unsafe_allow_html=True)
 
 with right:
@@ -537,7 +658,7 @@ with right:
         )
         layout(donut, 390, dict(l=8, r=28, t=30, b=12))
         donut.update_layout(legend=dict(orientation="v", y=.5, x=1.03, xanchor="left", font=dict(size=13, color=TEXT)))
-    st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
@@ -566,7 +687,7 @@ insight_html = f"""
   <div class="insight-head"><div class="insight-bulb">💡</div><div>KEY QUALITY<br>INSIGHTS</div></div>
   <div class="insight-item">{trend_sentence}</div>
   <div class="insight-item">Top inspection day:<br><b>{safe(top_day)}</b>&nbsp; with {number(top_day_qty)} pcs defects.</div>
-  <div class="insight-item">Line <b>{safe(top_line)}</b> has the highest defects: {number(top_line_qty)} pcs.</div>
+  <div class="insight-item">Vendor <b>{safe(top_vendor)}</b> has the highest rejected quantity: {number(top_vendor_qty)} pcs.</div>
   <div class="insight-item">Top item: <b>{safe(top_item)}</b> · Top defect: <b>{safe(top_defect)}</b>.</div>
 </div>
 """
@@ -581,11 +702,55 @@ rank_specs = [
     (rank_cols[1], "TOP ITEMS BY REJECTED QTY", item_rej, "#2474D8"),
     (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", defect_rej, RED),
 ]
+rank_figures: list[tuple[str, go.Figure]] = []
 for column, title, series, color in rank_specs:
+    rank_fig = bar_chart(series, color, rejected)
+    rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
-        st.plotly_chart(bar_chart(series, color, rejected), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(rank_fig, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
         st.markdown('</div>', unsafe_allow_html=True)
+
+# ============================================================
+# EXPORT REPORT
+# ============================================================
+all_export_figures = [("Month-over-Month Performance", month_fig), ("Disposition", donut)] + rank_figures
+export_metrics = [
+    ("Total Received", number(received)),
+    ("Approved", number(approved)),
+    ("Rejected", number(rejected)),
+    ("Reject Rate", pct(reject_rate)),
+    ("Top Vendor", top_vendor),
+]
+export_insights = [
+    f"Top vendor: {top_vendor} — {number(top_vendor_qty)} rejected pcs",
+    f"Top inspection day: {top_day} — {number(top_day_qty)} rejected pcs",
+    f"Top item: {top_item} — {number(top_item_qty)} rejected pcs",
+    f"Top defect: {top_defect} — {number(top_defect_qty)} rejected pcs",
+]
+
+st.markdown('<div class="chart-card"><div class="chart-title">EXPORT DASHBOARD</div>', unsafe_allow_html=True)
+export_col1, export_col2, export_col3 = st.columns([1, 1, 2], gap="small")
+try:
+    pdf_bytes = build_pdf_report(month, source_name or "Uploaded file", export_metrics, export_insights, all_export_figures)
+    png_zip_bytes = build_png_zip([(name.replace(" ", "_").lower() + ".png", fig) for name, fig in all_export_figures])
+    with export_col1:
+        st.download_button(
+            "📄 Download PDF report", pdf_bytes,
+            file_name=f"IQC_Dashboard_{month}.pdf", mime="application/pdf",
+            use_container_width=True,
+        )
+    with export_col2:
+        st.download_button(
+            "🖼️ Download PNG charts", png_zip_bytes,
+            file_name=f"IQC_Dashboard_Charts_{month}.zip", mime="application/zip",
+            use_container_width=True,
+        )
+    with export_col3:
+        st.caption("Bạn cũng có thể bấm biểu tượng camera trên từng biểu đồ để tải riêng ảnh PNG chất lượng cao.")
+except Exception as export_error:
+    st.warning(f"Không thể tạo PDF/PNG tự động: {export_error}. Hãy kiểm tra thư viện kaleido trong requirements.txt.")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
 # FOOTER SUMMARY
