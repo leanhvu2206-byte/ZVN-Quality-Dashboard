@@ -63,20 +63,22 @@ header[data-testid="stHeader"] {{height:0; background:transparent;}}
 .st-key-topbar {{
     background:linear-gradient(105deg,{NAVY_DARK} 0%,{NAVY} 63%,#082E6A 100%);
     border-radius:12px;
-    padding:12px 18px 8px;
+    padding:12px 18px 16px;
+    min-height:88px;
+    overflow:visible;
     box-shadow:0 5px 16px rgba(4,30,72,.22);
-    margin-bottom:5px;
+    margin-bottom:8px;
 }}
-.st-key-topbar div[data-testid="stHorizontalBlock"] {{align-items:center; gap:.65rem;}}
-.dash-title {{color:white; font-weight:900; font-size:clamp(28px,2.6vw,42px); line-height:1; letter-spacing:.2px; white-space:nowrap;}}
+.st-key-topbar div[data-testid="stHorizontalBlock"] {{align-items:flex-start; gap:.65rem;}}
+.dash-title {{color:white; font-weight:900; font-size:clamp(28px,2.6vw,42px); line-height:1.08; letter-spacing:.2px; white-space:nowrap;}}
 .dash-title-icon {{display:inline-flex;width:56px;height:56px;border-radius:50%;align-items:center;justify-content:center;background:white;color:{NAVY};font-size:30px;margin-right:12px;vertical-align:middle;}}
-.dash-subtitle {{font-size:12px;color:#D7E5FB;margin:5px 0 0 70px;letter-spacing:.2px;}}
+.dash-subtitle {{font-size:12px;color:#D7E5FB;margin:5px 0 0 70px;letter-spacing:.2px;line-height:1.35;min-height:18px;display:block;}}
 .st-key-topbar label {{color:white!important;font-weight:800!important;font-size:12px!important;margin-bottom:0!important;}}
 .st-key-topbar div[data-baseweb="select"] > div {{
     min-height:38px!important;height:38px!important;border:0!important;border-radius:6px!important;background:white!important;
     font-size:13px!important;box-shadow:none!important;
 }}
-.st-key-topbar div[data-testid="stSelectbox"] {{margin-top:-3px;}}
+.st-key-topbar div[data-testid="stSelectbox"] {{margin-top:1px;}}
 
 /* ---------- Uploader ---------- */
 .st-key-upload_panel {{margin:0 0 4px;}}
@@ -109,11 +111,14 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 }}
 
 /* ---------- Insight strip ---------- */
-.insights {{display:grid;grid-template-columns:1.15fr repeat(4,1.25fr);background:linear-gradient(90deg,#FFF8D9,#FFF0B5);border:1.5px solid #E9B92E;border-radius:12px;margin:10px 0;padding:15px 16px;box-shadow:0 3px 10px rgba(120,90,0,.10);min-height:126px;align-items:stretch;}}
-.insight-head {{display:flex;align-items:center;font-size:22px;font-weight:900;color:#102A56;padding-right:16px;line-height:1.25;}}
-.insight-bulb {{width:58px;height:58px;min-width:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:30px;margin-right:14px;box-shadow:0 2px 6px rgba(120,80,0,.18);}}
-.insight-item {{border-left:1px dashed #9A8B5F;padding:10px 18px;font-size:17px;font-weight:650;line-height:1.42;color:#17233D;display:flex;align-items:center;overflow-wrap:anywhere;}}
-.insight-item b {{color:{RED};font-weight:900;}}
+.insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF8D9,#FFF0B5);border:1.5px solid #E9B92E;border-radius:12px;margin:10px 0;padding:14px 16px;box-shadow:0 3px 10px rgba(120,90,0,.10);min-height:122px;align-items:stretch;}}
+.insight-head {{display:flex;align-items:center;font-size:20px;font-weight:900;color:#102A56;padding-right:14px;line-height:1.2;}}
+.insight-bulb {{width:54px;height:54px;min-width:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:28px;margin-right:12px;box-shadow:0 2px 6px rgba(120,80,0,.18);}}
+.insight-item {{border-left:1px dashed #9A8B5F;padding:10px 16px;color:#17233D;display:flex;align-items:center;justify-content:center;min-width:0;}}
+.insight-copy {{width:100%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px;font-size:15px;font-weight:700;line-height:1.28;overflow-wrap:anywhere;}}
+.insight-copy .insight-label {{font-size:13px;font-weight:900;color:#102A56;text-transform:uppercase;letter-spacing:.15px;}}
+.insight-copy b {{color:{RED};font-size:16px;font-weight:900;line-height:1.2;}}
+.insight-copy .insight-note {{font-size:14px;font-weight:700;color:#27364F;}}
 
 /* ---------- Bottom summary ---------- */
 .summary-strip {{display:grid;grid-template-columns:repeat(6,1fr);background:linear-gradient(100deg,{NAVY_DARK},{NAVY});color:white;border-radius:12px;padding:10px 6px;margin-top:5px;box-shadow:0 5px 14px rgba(4,30,72,.18);}}
@@ -882,9 +887,10 @@ except Exception as exc:
 # FILTERS (rendered inside the top bar placeholders)
 # ============================================================
 months = sorted(df["Year-Month"].dropna().unique(), reverse=True)
+month_options = ["All"] + months
 with month_placeholder.container():
-    month = st.selectbox("Month (Year-Month)", months, index=0, key="month_filter")
-month_df = df[df["Year-Month"] == month].copy()
+    month = st.selectbox("Month (Year-Month)", month_options, index=1 if months else 0, key="month_filter")
+month_df = df.copy() if month == "All" else df[df["Year-Month"] == month].copy()
 
 vendor_options = ["(All)"] + sorted(x for x in month_df[c["vendor"]].unique() if x != "(Blank)")
 with vendor_placeholder.container():
@@ -997,8 +1003,9 @@ with left:
         name="Output (pcs)",
         marker=dict(color=NAVY, line=dict(color=NAVY_DARK, width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Output"]],
-        textposition="outside",
-        textfont=dict(size=17, color=TEXT, family="Arial Black"),
+        textposition="inside",
+        insidetextanchor="end",
+        textfont=dict(size=16, color="white", family="Arial Black"),
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
@@ -1022,7 +1029,7 @@ with left:
             marker=dict(color=ORANGE, size=10, line=dict(color="white", width=1.5)),
             text=[f"{x:.2f}%" for x in monthly["Defect Rate"]],
             textposition="top center",
-            textfont=dict(size=17, color=RED, family="Arial Black"),
+            textfont=dict(size=16, color=RED, family="Arial Black"),
             hovertemplate="%{x}<br>Defect rate: %{y:.2f}%<extra></extra>",
         )
     )
@@ -1030,7 +1037,9 @@ with left:
     month_fig.update_layout(
         barmode="group",
         font=dict(family="Arial Black", size=18, color=TEXT),
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0, font=dict(size=17, color=TEXT, family="Arial Black")),
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0, font=dict(size=17, color=TEXT, family="Arial Black")),
+        uniformtext_minsize=13,
+        uniformtext_mode="show",
         yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black")),
         yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
     )
@@ -1088,7 +1097,7 @@ with right:
 # ============================================================
 previous_month = None
 previous_rate = None
-if month in list(df["Year-Month"].unique()):
+if month != "All" and month in list(df["Year-Month"].unique()):
     ordered = sorted(df["Year-Month"].unique())
     idx = ordered.index(month)
     if idx > 0:
@@ -1097,20 +1106,28 @@ if month in list(df["Year-Month"].unique()):
         prev_received = float(prev[c["received"]].sum())
         previous_rate = float(prev[c["rejected"]].sum()) / prev_received if prev_received else 0
 
-if previous_rate is None:
-    trend_sentence = f"Defect rate in {month}: <b>{pct(reject_rate)}</b>."
+if month == "All":
+    trend_label = "Overall defect rate"
+    trend_value = pct(reject_rate)
+    trend_note = f"Across {len(months)} month(s)"
+elif previous_rate is None:
+    trend_label = "Defect rate"
+    trend_value = pct(reject_rate)
+    trend_note = f"Period {month}"
 else:
     delta = reject_rate - previous_rate
     direction = "increased" if delta > 0 else "decreased"
-    trend_sentence = f"Defect rate <b>{direction} {abs(delta):.2%}</b> vs {previous_month} ({pct(previous_rate)})."
+    trend_label = "Defect rate trend"
+    trend_value = f"{direction} {abs(delta):.2%}"
+    trend_note = f"vs {previous_month} ({pct(previous_rate)})"
 
 insight_html = f"""
 <div class="insights">
   <div class="insight-head"><div class="insight-bulb">💡</div><div>KEY QUALITY<br>INSIGHTS</div></div>
-  <div class="insight-item">{trend_sentence}</div>
-  <div class="insight-item">Top inspection day:<br><b>{safe(top_day)}</b>&nbsp; with {number(top_day_qty)} pcs defects.</div>
-  <div class="insight-item">Vendor <b>{safe(top_vendor)}</b> has the highest rejected quantity: {number(top_vendor_qty)} pcs.</div>
-  <div class="insight-item">Top item: <b>{safe(top_item)}</b> · Top defect: <b>{safe(top_defect)}</b>.</div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">{safe(trend_label)}</span><b>{safe(trend_value)}</b><span class="insight-note">{safe(trend_note)}</span></div></div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top inspection day</span><b>{safe(top_day)}</b><span class="insight-note">{number(top_day_qty)} rejected pcs</span></div></div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top vendor</span><b>{safe(top_vendor)}</b><span class="insight-note">{number(top_vendor_qty)} rejected pcs</span></div></div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top item / defect</span><b>{safe(top_item)}</b><span class="insight-note">{safe(top_defect)}</span></div></div>
 </div>
 """
 st.markdown(insight_html, unsafe_allow_html=True)
