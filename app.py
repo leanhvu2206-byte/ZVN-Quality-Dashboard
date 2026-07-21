@@ -95,11 +95,11 @@ div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;}}
 
 
 /* ---------- Plotly chart typography ---------- */
-div[data-testid="stPlotlyChart"] .main-svg text {
+div[data-testid="stPlotlyChart"] .main-svg text {{
     font-family: Arial Black, Arial, Helvetica, sans-serif !important;
     font-weight: 800 !important;
     fill: #0A2147 !important;
-}
+}}
 
 /* ---------- Insight strip ---------- */
 .insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF7D7,#FFF1B9);border:1px solid #F0D77A;border-radius:12px;margin:8px 0;padding:12px 14px;box-shadow:0 2px 7px rgba(120,90,0,.06);}}
