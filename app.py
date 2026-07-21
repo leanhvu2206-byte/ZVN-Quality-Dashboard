@@ -556,7 +556,7 @@ def build_pdf_report(
 
 
 def _dashboard_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """Load a clear font available on Streamlit Cloud, with a safe fallback."""
+    """Load a reliable font on Streamlit Cloud."""
     candidates = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
@@ -570,30 +570,154 @@ def _dashboard_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | I
     return ImageFont.load_default()
 
 
-def _rounded_card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], radius: int = 22,
-                  fill: str = "#FFFFFF", outline: str = BORDER, width: int = 2) -> None:
+def _rounded_card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], radius: int = 26,
+                  fill: str = "#FFFFFF", outline: str = BORDER, width: int = 3) -> None:
     draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
 def _fit_text(draw: ImageDraw.ImageDraw, text: str, max_width: int, font_size: int,
-              min_size: int = 18, bold: bool = True) -> ImageFont.ImageFont:
+              min_size: int = 22, bold: bool = True) -> ImageFont.ImageFont:
     size = font_size
     while size > min_size:
         font = _dashboard_font(size, bold)
-        if draw.textbbox((0, 0), text, font=font)[2] <= max_width:
+        if draw.textbbox((0, 0), str(text), font=font)[2] <= max_width:
             return font
         size -= 1
     return _dashboard_font(min_size, bold)
 
 
+def _wrap_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont,
+                max_width: int, max_lines: int = 5) -> list[str]:
+    words = str(text).split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if draw.textbbox((0, 0), trial, font=font)[2] <= max_width:
+            current = trial
+        else:
+            if current:
+                lines.append(current)
+            current = word
+            if len(lines) >= max_lines - 1:
+                break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+    return lines[:max_lines]
+
+
+def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
+    """Dedicated print renderer with exact aspect ratio and large typography."""
+    dpi = 160
+    mpl_fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+    mpl_fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    traces = list(fig.data)
+    pie = next((t for t in traces if getattr(t, "type", "") == "pie"), None)
+    horizontal = next((t for t in traces if getattr(t, "type", "") == "bar" and getattr(t, "orientation", None) == "h"), None)
+
+    if pie is not None:
+        labels = list(pie.labels or [])
+        values = np.asarray(list(pie.values or []), dtype=float)
+        pie_colors = getattr(getattr(pie, "marker", None), "colors", None)
+        colors_list = list(pie_colors) if pie_colors is not None else [GREEN, RED, ORANGE, PURPLE, BLUE]
+        wedges, _ = ax.pie(
+            values, startangle=90, counterclock=False, colors=colors_list[:len(values)],
+            wedgeprops=dict(width=0.40, edgecolor="white", linewidth=3),
+        )
+        total = values.sum()
+        for wedge, value in zip(wedges, values):
+            share = value / total if total else 0
+            if share >= 0.025:
+                angle = (wedge.theta1 + wedge.theta2) / 2
+                x, y = 0.80 * np.cos(np.deg2rad(angle)), 0.80 * np.sin(np.deg2rad(angle))
+                ax.text(x, y, f"{share:.1%}", ha="center", va="center", color="white", fontsize=22, fontweight="bold")
+        center = f"{total:,.0f}\nTotal"
+        if getattr(fig.layout, "annotations", None):
+            center = _strip_html(fig.layout.annotations[0].text).replace("Total Defect", "\nTotal Defect")
+        ax.text(0, 0, center, ha="center", va="center", fontsize=28, fontweight="bold", color=TEXT)
+        ax.legend(wedges, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False,
+                  fontsize=19, handlelength=1.2, labelspacing=1.0)
+        ax.axis("equal")
+        ax.axis("off")
+        mpl_fig.subplots_adjust(left=0.03, right=0.72, top=0.96, bottom=0.04)
+
+    elif horizontal is not None:
+        labels = [str(x) for x in horizontal.y]
+        values = np.asarray(list(horizontal.x), dtype=float)
+        color = getattr(getattr(horizontal, "marker", None), "color", NAVY_MID)
+        positions = np.arange(len(labels))
+        ax.barh(positions, values, color=color, height=0.60)
+        ax.set_yticks(positions)
+        ax.set_yticklabels(labels, fontsize=22, fontweight="bold", color=TEXT)
+        ax.tick_params(axis="x", labelsize=18, colors=TEXT, width=1.4)
+        ax.grid(axis="x", color=GRID, linewidth=1.2)
+        ax.set_axisbelow(True)
+        ax.set_xlabel("PCS", fontsize=21, fontweight="bold", color=TEXT, labelpad=10)
+        max_value = float(values.max()) if len(values) else 1.0
+        txt = list(getattr(horizontal, "text", None) or [f"{v:,.0f}" for v in values])
+        for y, value, label_text in zip(positions, values, txt):
+            ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left",
+                    fontsize=20, fontweight="bold", color=TEXT)
+        ax.set_xlim(0, max_value * 1.40 if max_value else 1)
+        for spine in ("top", "right", "left"):
+            ax.spines[spine].set_visible(False)
+        ax.spines["bottom"].set_color("#AEBBCD")
+        mpl_fig.subplots_adjust(left=0.31, right=0.93, top=0.94, bottom=0.16)
+
+    else:
+        bar_traces = [t for t in traces if getattr(t, "type", "") == "bar"]
+        line_trace = next((t for t in traces if getattr(t, "type", "") == "scatter"), None)
+        categories = [str(x) for x in (bar_traces[0].x if bar_traces else (line_trace.x if line_trace is not None else []))]
+        pos = np.arange(len(categories))
+        bar_width = 0.34
+        handles, legend_labels = [], []
+        for idx, trace in enumerate(bar_traces):
+            vals = np.asarray(list(trace.y), dtype=float)
+            offset = (idx - (len(bar_traces) - 1) / 2) * bar_width
+            color = getattr(getattr(trace, "marker", None), "color", NAVY)
+            bars = ax.bar(pos + offset, vals, width=bar_width, color=color, label=str(trace.name))
+            for rect, value in zip(bars, vals):
+                ax.text(rect.get_x() + rect.get_width()/2, rect.get_height(), f"{value:,.0f}",
+                        ha="center", va="bottom", fontsize=19, fontweight="bold", color=TEXT)
+        ax.set_xticks(pos)
+        ax.set_xticklabels(categories, fontsize=21, fontweight="bold", color=TEXT)
+        ax.set_ylabel("PCS", fontsize=22, fontweight="bold", color=TEXT)
+        ax.tick_params(axis="y", labelsize=18, colors=TEXT)
+        ax.grid(axis="y", color=GRID, linewidth=1.1)
+        ax.set_axisbelow(True)
+        handles, legend_labels = ax.get_legend_handles_labels()
+        if line_trace is not None:
+            ax2 = ax.twinx()
+            rate = np.asarray(list(line_trace.y), dtype=float)
+            line_color = getattr(getattr(line_trace, "line", None), "color", ORANGE)
+            line, = ax2.plot(pos, rate, color=line_color, marker="o", linewidth=4.0, markersize=9, label=str(line_trace.name))
+            for x, value in zip(pos, rate):
+                ax2.text(x, value, f"{value:.2f}%", ha="center", va="bottom",
+                         fontsize=19, fontweight="bold", color=RED)
+            ax2.set_ylabel("%", fontsize=22, fontweight="bold", color=TEXT)
+            ax2.tick_params(axis="y", labelsize=18, colors=TEXT)
+            ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}%"))
+            handles.append(line); legend_labels.append(str(line_trace.name))
+        ax.legend(handles, legend_labels, loc="upper left", bbox_to_anchor=(0, 1.14), ncol=3,
+                  frameon=False, fontsize=20)
+        for spine in ("top", "right"):
+            ax.spines[spine].set_visible(False)
+        mpl_fig.subplots_adjust(left=0.10, right=0.89, top=0.82, bottom=0.18)
+
+    buffer = io.BytesIO()
+    mpl_fig.savefig(buffer, format="png", dpi=dpi, facecolor="white")
+    plt.close(mpl_fig)
+    return buffer.getvalue()
+
+
 def _paste_chart(canvas: Image.Image, fig: go.Figure, box: tuple[int, int, int, int]) -> None:
     x1, y1, x2, y2 = box
     width, height = x2 - x1, y2 - y1
-    png = Image.open(io.BytesIO(figure_png(fig, width=max(width, 900), height=max(height, 520)))).convert("RGB")
-    png.thumbnail((width, height), Image.Resampling.LANCZOS)
-    px = x1 + (width - png.width) // 2
-    py = y1 + (height - png.height) // 2
-    canvas.paste(png, (px, py))
+    chart = Image.open(io.BytesIO(_export_chart_png(fig, width, height))).convert("RGB")
+    if chart.size != (width, height):
+        chart = chart.resize((width, height), Image.Resampling.LANCZOS)
+    canvas.paste(chart, (x1, y1))
 
 
 def build_dashboard_pages(
@@ -604,127 +728,105 @@ def build_dashboard_pages(
     figures: list[tuple[str, go.Figure]],
     footer_metrics: list[tuple[str, str, str]],
 ) -> list[Image.Image]:
-    """Create two balanced landscape pages for export.
+    """Create a dedicated print report, not a screenshot of the web page."""
+    W, H = 3508, 2480  # A4 landscape at 300 dpi
+    M = 70
 
-    Page 1: header, KPI cards, Month-over-Month, Disposition and insights.
-    Page 2: the three Top-5 charts and footer summary.
-    """
-    W, H = 2400, 1700
+    def page() -> tuple[Image.Image, ImageDraw.ImageDraw]:
+        img = Image.new("RGB", (W, H), "#F3F6FB")
+        return img, ImageDraw.Draw(img)
 
-    def new_page() -> tuple[Image.Image, ImageDraw.ImageDraw]:
-        image = Image.new("RGB", (W, H), "#F3F6FB")
-        return image, ImageDraw.Draw(image)
+    def add_header(draw: ImageDraw.ImageDraw, title: str, subtitle: str, page_no: str) -> None:
+        draw.rounded_rectangle((M, 55, W-M, 250), radius=34, fill=NAVY_DARK)
+        draw.text((M+55, 98), title, font=_dashboard_font(58, True), fill="white")
+        draw.text((W-M-55, 120), subtitle, font=_dashboard_font(28, True), fill="#D7E7FF", anchor="ra")
+        draw.text((W-M-55, 185), page_no, font=_dashboard_font(23, True), fill="#AFC8EF", anchor="ra")
 
-    def header(draw: ImageDraw.ImageDraw, title: str, subtitle: str) -> None:
-        draw.rounded_rectangle((28, 24, W - 28, 150), radius=26, fill=NAVY_DARK)
-        draw.text((70, 54), title, font=_dashboard_font(48, True), fill="white")
-        draw.text((W - 70, 82), subtitle, font=_dashboard_font(24, True), fill="#D9E8FF", anchor="ra")
-
-    # ---------------- Page 1 ----------------
-    page1, draw1 = new_page()
-    header(draw1, "IQC QUALITY DASHBOARD", f"Month: {report_month}   |   Source: {source}")
+    # PAGE 1 — Executive summary
+    p1, d1 = page()
+    add_header(d1, "IQC QUALITY DASHBOARD", f"Reporting month: {report_month}  |  Source: {source}", "PAGE 1 / 2")
 
     # KPI cards
-    gap = 18
-    kpi_y1, kpi_y2 = 180, 410
-    kpi_w = (W - 56 - gap * (len(metrics) - 1)) // len(metrics)
-    accent_fills = ["#EAF3FF", "#EAF8EE", "#FDECEC", "#FFF4E5", "#F3EDFF"]
-    for idx, (label, value, accent) in enumerate(metrics):
-        x1 = 28 + idx * (kpi_w + gap)
-        x2 = x1 + kpi_w
-        _rounded_card(draw1, (x1, kpi_y1, x2, kpi_y2), radius=20, fill="white")
-        draw1.ellipse((x1 + 22, kpi_y1 + 62, x1 + 100, kpi_y1 + 140), fill=accent_fills[idx % len(accent_fills)])
-        draw1.text((x1 + 61, kpi_y1 + 101), str(idx + 1), font=_dashboard_font(26, True), fill=accent, anchor="mm")
-        draw1.text((x1 + 118, kpi_y1 + 52), label.upper(), font=_dashboard_font(22, True), fill=TEXT)
-        value_font = _fit_text(draw1, value, kpi_w - 145, 43, 26, True)
-        draw1.text((x1 + 118, kpi_y1 + 95), value, font=value_font, fill=accent)
+    kpi_top, kpi_bottom = 290, 645
+    gap = 26
+    card_w = (W - 2*M - gap*4) // 5
+    fill_map = ["#EAF3FF", "#EAF8EE", "#FDECEC", "#FFF3E0", "#F3ECFF"]
+    icon_chars = ["R", "A", "X", "%", "V"]
+    for i, (label, value, accent) in enumerate(metrics[:5]):
+        x1 = M + i*(card_w+gap); x2 = x1+card_w
+        _rounded_card(d1, (x1, kpi_top, x2, kpi_bottom), radius=28, fill="white")
+        d1.ellipse((x1+28, kpi_top+98, x1+142, kpi_top+212), fill=fill_map[i])
+        d1.text((x1+85, kpi_top+155), icon_chars[i], font=_dashboard_font(40, True), fill=accent, anchor="mm")
+        d1.text((x1+170, kpi_top+74), label.upper(), font=_dashboard_font(27, True), fill=TEXT)
+        vf = _fit_text(d1, value, card_w-195, 54, 28, True)
+        d1.text((x1+170, kpi_top+135), str(value), font=vf, fill=accent)
 
-    # Main chart row
-    chart_y1, chart_y2 = 440, 1180
-    left_box = (28, chart_y1, 1570, chart_y2)
-    right_box = (1590, chart_y1, W - 28, chart_y2)
-    for box, title in [(left_box, figures[0][0]), (right_box, figures[1][0])]:
-        _rounded_card(draw1, box, radius=20, fill="white")
-        title_width = min(720, box[2] - box[0] - 36)
-        draw1.rounded_rectangle((box[0] + 18, box[1] + 16, box[0] + title_width, box[1] + 66), radius=11, fill=NAVY)
-        draw1.text((box[0] + 35, box[1] + 28), title.upper(), font=_dashboard_font(25, True), fill="white")
-    _paste_chart(page1, figures[0][1], (left_box[0] + 18, left_box[1] + 74, left_box[2] - 18, left_box[3] - 18))
-    _paste_chart(page1, figures[1][1], (right_box[0] + 18, right_box[1] + 74, right_box[2] - 18, right_box[3] - 18))
+    # Main charts
+    y1, y2 = 690, 1740
+    left = (M, y1, 2280, y2)
+    right = (2310, y1, W-M, y2)
+    for box, title in ((left, figures[0][0]), (right, figures[1][0])):
+        _rounded_card(d1, box, radius=28, fill="white")
+        bar_w = min(850, box[2]-box[0]-50)
+        d1.rounded_rectangle((box[0]+24, box[1]+22, box[0]+bar_w, box[1]+92), radius=13, fill=NAVY)
+        d1.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(30, True), fill="white")
+    _paste_chart(p1, figures[0][1], (left[0]+30, left[1]+115, left[2]-30, left[3]-30))
+    _paste_chart(p1, figures[1][1], (right[0]+30, right[1]+115, right[2]-30, right[3]-30))
 
-    # Insight strip
-    ins_y1, ins_y2 = 1210, 1650
-    draw1.rounded_rectangle((28, ins_y1, W - 28, ins_y2), radius=22, fill="#FFF3C4", outline="#F1BE32", width=2)
-    draw1.ellipse((52, ins_y1 + 105, 142, ins_y1 + 195), fill="#FDBB16")
-    draw1.text((97, ins_y1 + 150), "!", font=_dashboard_font(44, True), fill=NAVY_DARK, anchor="mm")
-    draw1.text((165, ins_y1 + 95), "KEY QUALITY\nINSIGHTS", font=_dashboard_font(28, True), fill=TEXT, spacing=8)
-    start_x = 390
-    insight_w = (W - start_x - 36) // max(len(insights), 1)
-    for idx, text in enumerate(insights):
-        x = start_x + idx * insight_w
-        if idx:
-            draw1.line((x, ins_y1 + 35, x, ins_y2 - 35), fill="#D8B85F", width=2)
-        font = _dashboard_font(22, True)
-        words, lines, current = text.split(), [], ""
-        for word in words:
-            trial = (current + " " + word).strip()
-            if draw1.textbbox((0, 0), trial, font=font)[2] <= insight_w - 30:
-                current = trial
-            else:
-                if current:
-                    lines.append(current)
-                current = word
-        if current:
-            lines.append(current)
-        draw1.multiline_text((x + 15, ins_y1 + 65), "\n".join(lines[:7]), font=font, fill=TEXT, spacing=11)
+    # Insights as four readable cards
+    insight_top, insight_bottom = 1790, 2380
+    d1.rounded_rectangle((M, insight_top, W-M, insight_bottom), radius=30, fill="#FFF4C8", outline="#EDBE34", width=3)
+    title_w = 510
+    d1.rounded_rectangle((M, insight_top, M+title_w, insight_bottom), radius=30, fill="#FFBF1A")
+    d1.text((M+70, insight_top+155), "KEY QUALITY", font=_dashboard_font(36, True), fill=NAVY_DARK)
+    d1.text((M+70, insight_top+220), "INSIGHTS", font=_dashboard_font(48, True), fill=NAVY_DARK)
+    d1.text((M+255, insight_top+370), "!", font=_dashboard_font(90, True), fill="white", anchor="mm")
+    available = W-M-(M+title_w)-40
+    iw = available // 4
+    for i, insight in enumerate(insights[:4]):
+        x1 = M+title_w+20+i*iw
+        if i:
+            d1.line((x1, insight_top+45, x1, insight_bottom-45), fill="#D2B45D", width=3)
+        font = _dashboard_font(27, True)
+        lines = _wrap_lines(d1, insight, font, iw-50, max_lines=7)
+        d1.multiline_text((x1+24, insight_top+95), "\n".join(lines), font=font, fill=TEXT, spacing=17)
 
-    # ---------------- Page 2 ----------------
-    page2, draw2 = new_page()
-    header(draw2, "IQC QUALITY DASHBOARD — TOP 5 ANALYSIS", f"Month: {report_month}   |   Page 2 of 2")
+    # PAGE 2 — Detailed rankings
+    p2, d2 = page()
+    add_header(d2, "IQC QUALITY DASHBOARD — TOP 5 ANALYSIS", f"Reporting month: {report_month}", "PAGE 2 / 2")
+    row_boxes = [(M, 300, W-M, 930), (M, 970, W-M, 1600), (M, 1640, W-M, 2270)]
+    for (title, fig), box in zip(figures[2:5], row_boxes):
+        _rounded_card(d2, box, radius=28, fill="white")
+        d2.rounded_rectangle((box[0]+24, box[1]+22, box[0]+910, box[1]+92), radius=13, fill=NAVY)
+        d2.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(30, True), fill="white")
+        _paste_chart(p2, fig, (box[0]+35, box[1]+115, box[2]-35, box[3]-30))
 
-    # Three Top-5 cards stacked vertically for readability
-    card_x1, card_x2 = 28, W - 28
-    rows = [(180, 620), (645, 1085), (1110, 1550)]
-    for idx, ((title, fig), (y1, y2)) in enumerate(zip(figures[2:5], rows)):
-        _rounded_card(draw2, (card_x1, y1, card_x2, y2), radius=20, fill="white")
-        draw2.rounded_rectangle((card_x1 + 18, y1 + 16, card_x1 + 780, y1 + 66), radius=11, fill=NAVY)
-        draw2.text((card_x1 + 36, y1 + 28), title.upper(), font=_dashboard_font(25, True), fill="white")
-        _paste_chart(page2, fig, (card_x1 + 25, y1 + 75, card_x2 - 25, y2 - 18))
+    # Summary footer on page 2
+    fy1, fy2 = 2310, 2425
+    d2.rounded_rectangle((M, fy1, W-M, fy2), radius=22, fill=NAVY_DARK)
+    sw = (W-2*M) // max(1, len(footer_metrics))
+    for i, (label, value, accent) in enumerate(footer_metrics):
+        x1=M+i*sw; x2=x1+sw
+        if i:
+            d2.line((x1, fy1+18, x1, fy2-18), fill="#4B6994", width=2)
+        d2.text(((x1+x2)//2, fy1+22), label.upper(), font=_dashboard_font(18, True), fill="#EAF1FF", anchor="ma")
+        vf=_fit_text(d2, value, sw-28, 31, 20, True)
+        d2.text(((x1+x2)//2, fy1+65), str(value), font=vf, fill=accent, anchor="ma")
 
-    # Footer summary
-    foot_y1, foot_y2 = 1575, 1670
-    draw2.rounded_rectangle((28, foot_y1, W - 28, foot_y2), radius=18, fill=NAVY_DARK)
-    footer_w = (W - 56) // max(len(footer_metrics), 1)
-    for idx, (label, value, accent) in enumerate(footer_metrics):
-        x1 = 28 + idx * footer_w
-        x2 = x1 + footer_w
-        if idx:
-            draw2.line((x1, foot_y1 + 14, x1, foot_y2 - 14), fill="#4F6D97", width=2)
-        draw2.text(((x1 + x2) // 2, foot_y1 + 20), label.upper(), font=_dashboard_font(17, True), fill="white", anchor="ma")
-        val_font = _fit_text(draw2, value, footer_w - 24, 28, 18, True)
-        draw2.text(((x1 + x2) // 2, foot_y1 + 55), value, font=val_font, fill=accent, anchor="ma")
-
-    return [page1, page2]
+    return [p1, p2]
 
 
 def dashboard_pages_bytes(images: list[Image.Image], output_format: str) -> tuple[bytes, str, str]:
-    """Return a 2-page PDF or a ZIP containing two high-resolution PNG pages."""
+    """Return a 2-page PDF or a ZIP with two print-quality PNG pages."""
     buffer = io.BytesIO()
     if output_format == "PDF":
-        rgb_images = [img.convert("RGB") for img in images]
-        rgb_images[0].save(
-            buffer,
-            format="PDF",
-            save_all=True,
-            append_images=rgb_images[1:],
-            resolution=180.0,
-        )
+        rgb = [img.convert("RGB") for img in images]
+        rgb[0].save(buffer, format="PDF", save_all=True, append_images=rgb[1:], resolution=300.0)
         return buffer.getvalue(), "application/pdf", "pdf"
-
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for idx, image in enumerate(images, start=1):
-            png_buffer = io.BytesIO()
-            image.save(png_buffer, format="PNG", optimize=True)
-            archive.writestr(f"IQC_Dashboard_Page_{idx}.png", png_buffer.getvalue())
+        for i, image in enumerate(images, 1):
+            b = io.BytesIO(); image.save(b, format="PNG", optimize=True)
+            archive.writestr(f"IQC_Dashboard_Print_Page_{i}.png", b.getvalue())
     return buffer.getvalue(), "application/zip", "zip"
 
 # ============================================================
@@ -1066,7 +1168,7 @@ full_footer = [
     ("Items", number(filtered[c["item"]].replace("(Blank)", pd.NA).nunique()), "#FFFFFF"),
 ]
 
-st.markdown('<div style="margin-top:12px;font-size:18px;font-weight:900;color:#062B63">⬇️ EXPORT FULL DASHBOARD</div>', unsafe_allow_html=True)
+st.markdown('<div style="margin-top:12px;font-size:18px;font-weight:900;color:#062B63">⬇️ EXPORT PROFESSIONAL REPORT</div>', unsafe_allow_html=True)
 try:
     dashboard_pages = build_dashboard_pages(
         report_month=month,
@@ -1082,17 +1184,17 @@ try:
     export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, export_format)
     with export_button_col:
         st.download_button(
-            "⬇️ EXPORT FULL DASHBOARD",
+            "⬇️ EXPORT PROFESSIONAL REPORT",
             data=export_bytes,
-            file_name=f"IQC_Dashboard_2_Pages_{month}.{extension}",
+            file_name=f"IQC_Professional_Report_{month}.{extension}",
             mime=export_mime,
             use_container_width=True,
             type="primary",
         )
-    st.caption("PDF gồm 2 trang. PNG được tải dưới dạng ZIP chứa 2 ảnh riêng, giúp bố cục cân đối và chữ dễ đọc.")
+    st.caption("PDF gồm 2 trang A4 ngang được thiết kế riêng cho bản in. PNG được tải dưới dạng ZIP chứa 2 ảnh chất lượng cao.")
 except Exception as export_error:
     st.error(f"Không thể tạo file dashboard: {export_error}")
-    st.caption("Vui lòng kiểm tra lại dữ liệu hoặc tải lại trang. Bản V9 xuất PDF 2 trang hoặc ZIP gồm 2 ảnh PNG, không cần Chrome/Kaleido.")
+    st.caption("Vui lòng kiểm tra lại dữ liệu hoặc tải lại trang. Bản Print Pro xuất PDF 2 trang hoặc ZIP gồm 2 ảnh PNG, không cần Chrome/Kaleido.")
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
