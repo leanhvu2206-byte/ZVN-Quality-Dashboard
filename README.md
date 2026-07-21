@@ -1,48 +1,35 @@
-# ZVN Assembly Defects Web Dashboard
+# IQC Quality Web Dashboard
 
-A polished browser-based quality dashboard built with **Python, Streamlit, Pandas, and Plotly**.
+Streamlit dashboard designed for the IQC file structure with columns such as:
 
-## Features
+- Item Receipt Date
+- Quantity Received
+- Quantity Approved (Actual)
+- Quantity Rejected
+- Quantity Reworked
+- Quantity Special Released
+- Quantity In Quarantine
+- Quantity To Inspect
+- Item, Vendor, Defect, Location
 
-- Upload CSV, XLSX, XLSM, or XLS files.
-- Supports NetSuite SpreadsheetML XML files saved with an `.xls` extension.
-- Filters by month, production line, work order group, and item.
-- Automatic KPI calculation.
-- Interactive line, donut, bar, monthly performance, and cost-impact charts.
-- Download filtered data as CSV.
-- Includes the supplied data file as sample data.
+## Deploy on Streamlit Community Cloud
 
-## Run on Windows
+1. Upload all project files to your GitHub repository.
+2. Optional: add the shared data file as `data/IQC_Data.xlsx`.
+3. Open https://share.streamlit.io and deploy `app.py`.
+4. Repository: your GitHub repo, Branch: `main`, Main file: `app.py`.
 
-1. Install Python 3.10 or newer.
-2. Open Command Prompt in this folder.
-3. Run:
+## Important data-sharing note
 
-```bat
+A public GitHub repository exposes every committed data file. If the IQC data is confidential:
+
+- do not commit the data file; users can upload it in the app, or
+- make the repository/app private using an appropriate hosting plan, or
+- later connect the app to a protected database/SharePoint/Google Drive.
+
+## Run locally
+
+```bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
-
-The dashboard opens automatically in your browser, normally at:
-
-```text
-http://localhost:8501
-```
-
-## Update data
-
-Open the web page and use **Upload data** in the left sidebar. No code change is required.
-
-## Expected columns
-
-- Date
-- Document Number
-- Production Line
-- Item
-- Work Order Group
-- Total Quantity (Including Rejects)
-- Defect Type
-- Quantity
-- Cost Value (AUD)
-
-The columns `% Defects` and `Date Created` are optional.
