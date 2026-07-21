@@ -107,10 +107,10 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 }}
 
 /* ---------- Insight strip ---------- */
-.insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF7D7,#FFF1B9);border:1px solid #F0D77A;border-radius:12px;margin:8px 0;padding:12px 14px;box-shadow:0 2px 7px rgba(120,90,0,.06);}}
-.insight-head {{display:flex;align-items:center;font-size:20px;font-weight:900;color:#17233D;padding-right:10px;}}
-.insight-bulb {{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:27px;margin-right:13px;}}
-.insight-item {{border-left:1px dashed #8D98A7;padding:7px 16px;font-size:14px;line-height:1.48;color:#1F2937;display:flex;align-items:center;}}
+.insights {{display:grid;grid-template-columns:1.15fr repeat(4,1.25fr);background:linear-gradient(90deg,#FFF8D9,#FFF0B5);border:1.5px solid #E9B92E;border-radius:12px;margin:10px 0;padding:15px 16px;box-shadow:0 3px 10px rgba(120,90,0,.10);min-height:126px;align-items:stretch;}}
+.insight-head {{display:flex;align-items:center;font-size:22px;font-weight:900;color:#102A56;padding-right:16px;line-height:1.25;}}
+.insight-bulb {{width:58px;height:58px;min-width:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:30px;margin-right:14px;box-shadow:0 2px 6px rgba(120,80,0,.18);}}
+.insight-item {{border-left:1px dashed #9A8B5F;padding:10px 18px;font-size:17px;font-weight:650;line-height:1.42;color:#17233D;display:flex;align-items:center;overflow-wrap:anywhere;}}
 .insight-item b {{color:{RED};font-weight:900;}}
 
 /* ---------- Bottom summary ---------- */
@@ -329,16 +329,16 @@ def bar_chart(series: pd.Series, color: str, total: float) -> go.Figure:
             text=labels,
             textposition="outside",
             cliponaxis=False,
-            textfont=dict(size=20, color=TEXT, family="Arial Black"),
+            textfont=dict(size=16, color=TEXT, family="Arial Black"),
             hovertemplate="%{y}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
     max_label = max((len(str(x)) for x in s.index), default=10)
     left_margin = min(300, max(145, max_label * 8 + 28))
-    layout(fig, 500, dict(l=left_margin, r=145, t=24, b=72))
+    layout(fig, 470, dict(l=left_margin, r=125, t=20, b=64))
     fig.update_layout(showlegend=False, paper_bgcolor="white", plot_bgcolor="white")
-    fig.update_xaxes(title=dict(text="PCS", font=dict(size=20, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=18, color=TEXT, family="Arial Black"))
-    fig.update_yaxes(automargin=True, tickfont=dict(size=20, color=TEXT, family="Arial Black"), showgrid=False)
+    fig.update_xaxes(title=dict(text="PCS", font=dict(size=17, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=14, color=TEXT, family="Arial Black"))
+    fig.update_yaxes(automargin=True, tickfont=dict(size=16, color=TEXT, family="Arial Black"), showgrid=False)
     return fig
 
 
@@ -362,9 +362,10 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
     horizontal = next((t for t in traces if getattr(t, "type", "") == "bar" and getattr(t, "orientation", None) == "h"), None)
 
     if pie is not None:
-        labels = list(pie.labels or [])
-        values = np.asarray(list(pie.values or []), dtype=float)
-        colors_list = list(getattr(getattr(pie, "marker", None), "colors", None) or [GREEN, RED, ORANGE, PURPLE, BLUE])
+        labels = [] if pie.labels is None else list(pie.labels)
+        values = np.asarray([] if pie.values is None else list(pie.values), dtype=float)
+        pie_colors = getattr(getattr(pie, "marker", None), "colors", None)
+        colors_list = [GREEN, RED, ORANGE, PURPLE, BLUE] if pie_colors is None else list(pie_colors)
         wedges, _ = ax.pie(
             values,
             startangle=90,
@@ -400,7 +401,8 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
         ax.set_axisbelow(True)
         ax.set_xlabel("PCS", fontsize=13, fontweight="bold", color=TEXT)
         max_value = float(values.max()) if len(values) else 1.0
-        text_values = list(horizontal.text or [f"{v:,.0f}" for v in values])
+        horizontal_text = getattr(horizontal, "text", None)
+        text_values = [f"{v:,.0f}" for v in values] if horizontal_text is None else list(horizontal_text)
         for y, value, label_text in zip(positions, values, text_values):
             ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left", fontsize=12.5, fontweight="bold", color=TEXT)
         ax.set_xlim(0, max_value * 1.34 if max_value else 1)
@@ -1039,6 +1041,7 @@ full_footer = [
     ("Items", number(filtered[c["item"]].replace("(Blank)", pd.NA).nunique()), "#FFFFFF"),
 ]
 
+st.markdown('<div style="margin-top:12px;font-size:18px;font-weight:900;color:#062B63">⬇️ EXPORT FULL DASHBOARD</div>', unsafe_allow_html=True)
 try:
     dashboard_image = build_full_dashboard_image(
         report_month=month,
@@ -1064,7 +1067,8 @@ try:
         )
     st.caption("Xuất một file duy nhất bao gồm toàn bộ KPI, biểu đồ, insight và phần tổng kết của dashboard.")
 except Exception as export_error:
-    st.warning(f"Không thể tạo file dashboard: {export_error}")
+    st.error(f"Không thể tạo file dashboard: {export_error}")
+    st.caption("Vui lòng kiểm tra lại dữ liệu hoặc tải lại trang. Bản V7 không cần Chrome/Kaleido.")
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
