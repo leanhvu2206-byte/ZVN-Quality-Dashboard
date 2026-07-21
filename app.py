@@ -21,20 +21,20 @@ st.set_page_config(
 # ============================================================
 # THEME
 # ============================================================
-NAVY = "#062B63"
-NAVY_DARK = "#031A3D"
-NAVY_MID = "#0B4F9C"
-BLUE = "#1769D2"
-GREEN = "#55A630"
-RED = "#EB3B2E"
-ORANGE = "#FFB000"
+NAVY = "#073B7A"
+NAVY_DARK = "#031D46"
+NAVY_MID = "#0A56B5"
+BLUE = "#176FDB"
+GREEN = "#45A52C"
+RED = "#E6332A"
+ORANGE = "#F5A000"
 PURPLE = "#7B2CBF"
 CYAN = "#19A6BE"
-TEXT = "#102A56"
-MUTED = "#5B6B80"
-GRID = "#D5DEE9"
-BG = "#F5F7FB"
-BORDER = "#CFD9E6"
+TEXT = "#0A2147"
+MUTED = "#425466"
+GRID = "#E3E9F1"
+BG = "#F2F5FA"
+BORDER = "#C8D3E1"
 
 st.markdown(
     f"""
@@ -77,20 +77,20 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 .kpi {{display:flex;align-items:center;min-height:112px;padding:10px 18px;border-right:1px solid #D7DEE8;}}
 .kpi:last-child {{border-right:0;}}
 .kpi-icon {{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{NAVY};color:white;font-size:30px;margin-right:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.13);}}
-.kpi-label {{font-size:12px;font-weight:900;color:#18233B;letter-spacing:.2px;white-space:nowrap;}}
+.kpi-label {{font-size:13px;font-weight:900;color:#101828;letter-spacing:.2px;white-space:nowrap;}}
 .kpi-value {{font-size:clamp(26px,2.3vw,38px);font-weight:900;line-height:1.08;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}}
-.kpi-unit {{font-size:11px;color:#17243A;font-weight:700;margin-top:3px;}}
+.kpi-unit {{font-size:12px;color:#17243A;font-weight:700;margin-top:3px;}}
 
 /* ---------- Chart cards ---------- */
-.chart-card {{background:white;border:1px solid {BORDER};border-radius:12px;padding:8px 10px 5px;box-shadow:0 2px 8px rgba(15,40,80,.055);}}
-.chart-title {{display:inline-block;background:linear-gradient(90deg,{NAVY_DARK},{NAVY_MID});color:white;padding:5px 18px;border-radius:6px;font-size:12px;font-weight:900;letter-spacing:.25px;margin:0 0 5px 10px;min-width:220px;text-align:center;}}
+.chart-card {{background:white;border:1.2px solid {BORDER};border-radius:12px;padding:10px 12px 7px;box-shadow:0 4px 14px rgba(15,40,80,.09);}}
+.chart-title {{display:inline-block;background:linear-gradient(90deg,{NAVY_DARK},{NAVY_MID});color:white;padding:7px 20px;border-radius:7px;font-size:14px;font-weight:900;letter-spacing:.25px;margin:0 0 5px 10px;min-width:220px;text-align:center;}}
 div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;}}
 
 /* ---------- Insight strip ---------- */
 .insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF7D7,#FFF1B9);border:1px solid #F0D77A;border-radius:12px;margin:8px 0;padding:12px 14px;box-shadow:0 2px 7px rgba(120,90,0,.06);}}
-.insight-head {{display:flex;align-items:center;font-size:18px;font-weight:900;color:#17233D;padding-right:10px;}}
+.insight-head {{display:flex;align-items:center;font-size:20px;font-weight:900;color:#17233D;padding-right:10px;}}
 .insight-bulb {{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:27px;margin-right:13px;}}
-.insight-item {{border-left:1px dashed #8D98A7;padding:7px 16px;font-size:12.5px;line-height:1.42;color:#1F2937;display:flex;align-items:center;}}
+.insight-item {{border-left:1px dashed #8D98A7;padding:7px 16px;font-size:14px;line-height:1.48;color:#1F2937;display:flex;align-items:center;}}
 .insight-item b {{color:{RED};font-weight:900;}}
 
 /* ---------- Bottom summary ---------- */
@@ -98,9 +98,12 @@ div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;}}
 .summary-item {{display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.35);min-height:82px;padding:5px 10px;}}
 .summary-item:last-child {{border-right:0;}}
 .summary-icon {{width:50px;height:50px;min-width:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:white;color:{NAVY};font-size:24px;margin-right:11px;}}
-.summary-label {{font-size:11px;font-weight:850;color:#E5EEFC;white-space:nowrap;}}
-.summary-value {{font-size:24px;font-weight:900;line-height:1.05;margin-top:3px;white-space:nowrap;}}
-.summary-unit {{font-size:10.5px;color:#D8E5F8;margin-top:2px;}}
+.summary-label {{font-size:12px;font-weight:850;color:#E5EEFC;white-space:nowrap;}}
+.summary-value {{font-size:27px;font-weight:900;line-height:1.05;margin-top:3px;white-space:nowrap;}}
+.summary-value.accepted {{color:#63D65E;}}
+.summary-value.rejected {{color:#FF4B3E;}}
+.summary-value.rate {{color:#FFD21F;}}
+.summary-unit {{font-size:11.5px;color:#D8E5F8;margin-top:2px;}}
 .source-note {{text-align:center;font-size:10px;color:#667085;margin-top:4px;}}
 
 /* ---------- Data table ---------- */
@@ -274,19 +277,19 @@ def layout(fig: go.Figure, height: int, margins: dict | None = None) -> go.Figur
         margin=margins or dict(l=32, r=18, t=22, b=30),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="white",
-        font=dict(family="Arial", color=TEXT, size=12),
-        hoverlabel=dict(bgcolor="white", font_size=13),
-        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+        font=dict(family="Arial", color=TEXT, size=14),
+        hoverlabel=dict(bgcolor="white", font_size=14, font_family="Arial"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=13, color=TEXT)),
         bargap=0.32,
     )
-    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="#BCC6D4", tickfont=dict(size=11))
-    fig.update_yaxes(gridcolor=GRID, zeroline=False, tickfont=dict(size=11))
+    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="#AEBBCD", linewidth=1.2, tickfont=dict(size=13, color=TEXT, family="Arial"), title_font=dict(size=14, color=TEXT))
+    fig.update_yaxes(gridcolor=GRID, gridwidth=1, zeroline=False, tickfont=dict(size=13, color=TEXT, family="Arial"), title_font=dict(size=14, color=TEXT))
     return fig
 
 
 def empty_chart(text: str, height: int = 220) -> go.Figure:
     fig = go.Figure()
-    fig.add_annotation(text=text, x=.5, y=.5, showarrow=False, font=dict(size=12, color=MUTED))
+    fig.add_annotation(text=text, x=.5, y=.5, showarrow=False, font=dict(size=14, color=MUTED, family="Arial"))
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     return layout(fig, height, dict(l=5, r=5, t=5, b=5))
@@ -295,24 +298,25 @@ def empty_chart(text: str, height: int = 220) -> go.Figure:
 def bar_chart(series: pd.Series, color: str, total: float) -> go.Figure:
     s = series.head(5).sort_values(ascending=True)
     if s.empty:
-        return empty_chart("No rejected quantity", 260)
+        return empty_chart("No rejected quantity", 350)
     labels = [f"{value:,.0f} ({value / total:.2%})" if total else f"{value:,.0f}" for value in s.values]
     fig = go.Figure(
         go.Bar(
             x=s.values,
             y=s.index,
             orientation="h",
-            marker=dict(color=color, line=dict(color=color, width=0)),
+            marker=dict(color=color, line=dict(color="rgba(0,0,0,0.10)", width=1.0)),
             text=labels,
             textposition="outside",
             cliponaxis=False,
+            textfont=dict(size=13, color=TEXT, family="Arial Black"),
             hovertemplate="%{y}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
-    layout(fig, 270, dict(l=18, r=95, t=10, b=42))
+    layout(fig, 365, dict(l=28, r=125, t=15, b=50))
     fig.update_layout(showlegend=False)
-    fig.update_xaxes(title=dict(text="PCS", font=dict(size=11)), rangemode="tozero")
-    fig.update_yaxes(automargin=True, tickfont=dict(size=10.5))
+    fig.update_xaxes(title=dict(text="PCS", font=dict(size=14, color=TEXT)), rangemode="tozero", tickfont=dict(size=13, color=TEXT))
+    fig.update_yaxes(automargin=True, tickfont=dict(size=13.5, color=TEXT, family="Arial"))
     return fig
 
 
@@ -397,13 +401,10 @@ quarantine = float(filtered[c["quarantine"]].sum())
 to_inspect = float(filtered[c["to_inspect"]].sum())
 reject_rate = rejected / received if received else 0.0
 
-vendor_rej = filtered.groupby(c["vendor"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
-vendor_rej = vendor_rej[vendor_rej > 0]
-item_rej = filtered.groupby(c["item"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
-item_rej = item_rej[item_rej > 0]
-defect_rej = filtered.groupby(c["defect"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
-defect_rej = defect_rej[defect_rej > 0]
-line_rej = filtered.groupby(c["location"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
+vendor_rej = filtered[filtered[c["vendor"]] != "(Blank)"].groupby(c["vendor"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
+item_rej = filtered[filtered[c["item"]] != "(Blank)"].groupby(c["item"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
+defect_rej = filtered[filtered[c["defect"]] != "(Blank)"].groupby(c["defect"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
+line_rej = filtered[filtered[c["location"]] != "(Blank)"].groupby(c["location"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
 line_rej = line_rej[line_rej > 0]
 daily_rej = filtered.groupby(filtered[c["date"]].dt.date)[c["rejected"]].sum().sort_index()
 
@@ -458,20 +459,20 @@ with left:
         x=monthly.index,
         y=monthly["Output"],
         name="Output (pcs)",
-        marker_color=NAVY,
+        marker=dict(color=NAVY, line=dict(color=NAVY_DARK, width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Output"]],
         textposition="outside",
-        textfont=dict(size=10),
+        textfont=dict(size=12, color=TEXT, family="Arial Black"),
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
         x=monthly.index,
         y=monthly["Defect"],
         name="Defect (pcs)",
-        marker_color=RED,
+        marker=dict(color=RED, line=dict(color="#B42318", width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Defect"]],
         textposition="outside",
-        textfont=dict(size=10, color=RED),
+        textfont=dict(size=12, color=RED, family="Arial Black"),
         hovertemplate="%{x}<br>Defect: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_trace(
@@ -481,19 +482,19 @@ with left:
             yaxis="y2",
             name="Defect Rate (%)",
             mode="lines+markers+text",
-            line=dict(color=ORANGE, width=3),
-            marker=dict(color=ORANGE, size=8),
+            line=dict(color=ORANGE, width=4),
+            marker=dict(color=ORANGE, size=10, line=dict(color="white", width=1.5)),
             text=[f"{x:.2f}%" for x in monthly["Defect Rate"]],
             textposition="top center",
-            textfont=dict(size=10, color=RED),
+            textfont=dict(size=12, color=RED, family="Arial Black"),
             hovertemplate="%{x}<br>Defect rate: %{y:.2f}%<extra></extra>",
         )
     )
-    layout(month_fig, 340, dict(l=58, r=58, t=42, b=48))
+    layout(month_fig, 390, dict(l=68, r=68, t=50, b=55))
     month_fig.update_layout(
         barmode="group",
-        yaxis=dict(title=dict(text="PCS", font=dict(size=12)), gridcolor=GRID, tickfont=dict(size=11)),
-        yaxis2=dict(title=dict(text="%", font=dict(size=12)), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=11)),
+        yaxis=dict(title=dict(text="PCS", font=dict(size=14, color=TEXT)), gridcolor=GRID, tickfont=dict(size=13, color=TEXT)),
+        yaxis2=dict(title=dict(text="%", font=dict(size=14, color=TEXT)), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=13, color=TEXT)),
     )
     st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
@@ -509,7 +510,7 @@ with right:
     })
     disposition = disposition[disposition > 0]
     if disposition.empty:
-        donut = empty_chart("No disposition data", 340)
+        donut = empty_chart("No disposition data", 390)
     else:
         colors = {
             "Accepted": GREEN,
@@ -526,16 +527,16 @@ with right:
                 sort=False,
                 marker=dict(colors=[colors[x] for x in disposition.index], line=dict(color="white", width=2)),
                 textinfo="percent",
-                textfont=dict(size=13, color="white"),
+                textfont=dict(size=14, color="white", family="Arial Black"),
                 hovertemplate="%{label}<br>%{value:,.0f} pcs<br>%{percent}<extra></extra>",
             )
         )
         donut.add_annotation(
             text=f"<b>{rejected:,.0f}</b><br><span style='font-size:12px'>Total Defect</span>",
-            x=.5, y=.5, showarrow=False, font=dict(size=23, color=TEXT)
+            x=.5, y=.5, showarrow=False, font=dict(size=26, color=TEXT, family="Arial Black")
         )
-        layout(donut, 340, dict(l=5, r=20, t=25, b=8))
-        donut.update_layout(legend=dict(orientation="v", y=.5, x=1.03, xanchor="left", font=dict(size=11)))
+        layout(donut, 390, dict(l=8, r=28, t=30, b=12))
+        donut.update_layout(legend=dict(orientation="v", y=.5, x=1.03, xanchor="left", font=dict(size=13, color=TEXT)))
     st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": False})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -604,21 +605,21 @@ if time_col and time_col in filtered.columns and pd.api.types.is_timedelta64_dty
     inspection_time_text = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 summary = [
-    ("📋", "TOTAL INSPECTION", number(to_inspect if to_inspect > 0 else record_count), "Times / PCS"),
-    ("✓", "TOTAL ACCEPTED", number(approved), pct(accepted_rate)),
-    ("✕", "TOTAL REJECTED", number(rejected), pct(reject_rate)),
-    ("%", "DEFECT RATE", pct(reject_rate), "Rejected / Output"),
-    ("👤", "TOTAL COUNTER", number(counter_count), "People / Suppliers"),
-    ("◷", "INSPECTION TIME", inspection_time_text, "HH:MM:SS"),
+    ("📋", "TOTAL INSPECTION", number(to_inspect if to_inspect > 0 else record_count), "Times / PCS", ""),
+    ("✓", "TOTAL ACCEPTED", number(approved), pct(accepted_rate), "accepted"),
+    ("✕", "TOTAL REJECTED", number(rejected), pct(reject_rate), "rejected"),
+    ("%", "DEFECT RATE", pct(reject_rate), "Rejected / Output", "rate"),
+    ("👤", "TOTAL COUNTER", number(counter_count), "People / Suppliers", ""),
+    ("◷", "INSPECTION TIME", inspection_time_text, "HH:MM:SS", ""),
 ]
 footer_html = '<div class="summary-strip">'
-for icon, label, value, unit in summary:
+for icon, label, value, unit, value_class in summary:
     footer_html += (
         '<div class="summary-item">'
         f'<div class="summary-icon">{icon}</div>'
         '<div>'
         f'<div class="summary-label">{label}</div>'
-        f'<div class="summary-value">{safe(value)}</div>'
+        f'<div class="summary-value {value_class}">{safe(value)}</div>'
         f'<div class="summary-unit">{safe(unit)}</div>'
         '</div></div>'
     )
