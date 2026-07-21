@@ -91,6 +91,8 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 .kpi-icon {{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{NAVY};color:white;font-size:30px;margin-right:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.13);}}
 .kpi-label {{font-size:13px;font-weight:900;color:#101828;letter-spacing:.2px;white-space:nowrap;}}
 .kpi-value {{font-size:clamp(26px,2.3vw,38px);font-weight:900;line-height:1.08;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}}
+.kpi.top-vendor .kpi-value {{font-size:clamp(18px,1.55vw,25px);line-height:1.12;white-space:normal;overflow:visible;text-overflow:clip;max-width:220px;overflow-wrap:anywhere;word-break:normal;}}
+.kpi.top-vendor {{padding-left:14px;padding-right:14px;}}
 .kpi-unit {{font-size:12px;color:#17243A;font-weight:700;margin-top:3px;}}
 
 /* ---------- Chart cards ---------- */
@@ -931,17 +933,41 @@ top_day_qty = float(daily_rej.max()) if len(daily_rej) else 0.0
 # ============================================================
 # KPI ROW
 # ============================================================
+def display_vendor_name(name: str, max_chars: int = 30) -> str:
+    text = safe(name).strip()
+    if len(text) <= max_chars:
+        return text
+    words = text.split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if len(candidate) <= 17 or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+        if len(lines) == 1:
+            break
+    if current and len(lines) < 2:
+        lines.append(current)
+    result = "<br>".join(lines[:2])
+    if len(text) > sum(len(x) for x in lines[:2]) + max(0, len(lines[:2]) - 1):
+        result += "…"
+    return result
+
 kpis = [
     ("📋", "TOTAL DEFECT", number(rejected), "PCS", RED),
     ("📦", "OUTPUT", number(received), "PCS", NAVY),
     ("✓", "DEFECT RATE", pct(reject_rate), "Rejected / Output", RED),
-    ("🏢", "TOP VENDOR", safe(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
+    ("🏢", "TOP VENDOR", display_vendor_name(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
     ("📅", "TOP INSPECTION DAY", safe(top_day), "Date", NAVY),
 ]
 kpi_html = '<div class="kpi-row">'
 for icon, label, value, unit, color in kpis:
+    extra_class = ' top-vendor' if label == 'TOP VENDOR' else ''
     kpi_html += (
-        '<div class="kpi">'
+        f'<div class="kpi{extra_class}">'
         f'<div class="kpi-icon">{icon}</div>'
         '<div>'
         f'<div class="kpi-label">{label}</div>'
@@ -955,7 +981,7 @@ st.markdown(kpi_html, unsafe_allow_html=True)
 # ============================================================
 # MAIN CHARTS
 # ============================================================
-left, right = st.columns([1.42, 1], gap="small")
+left, right = st.columns([58, 42], gap="small")
 
 with left:
     st.markdown('<div class="chart-card"><div class="chart-title">MONTH-OVER-MONTH PERFORMANCE</div>', unsafe_allow_html=True)
@@ -1023,7 +1049,7 @@ with right:
     })
     disposition = disposition[disposition > 0]
     if disposition.empty:
-        donut = empty_chart("No disposition data", 390)
+        donut = empty_chart("No disposition data", 500)
     else:
         colors = {
             "Accepted": GREEN,
@@ -1048,8 +1074,12 @@ with right:
             text=f"<b>{rejected:,.0f}</b><br><span style='font-size:12px'>Total Defect</span>",
             x=.5, y=.5, showarrow=False, font=dict(size=26, color=TEXT, family="Arial Black")
         )
-        layout(donut, 390, dict(l=8, r=28, t=30, b=12))
-        donut.update_layout(legend=dict(orientation="v", y=.5, x=1.03, xanchor="left", font=dict(size=13, color=TEXT)))
+        layout(donut, 500, dict(l=18, r=20, t=45, b=35))
+        donut.update_layout(
+            legend=dict(orientation="v", y=.5, x=.78, xanchor="left", font=dict(size=14, color=TEXT, family="Arial Black")),
+            margin=dict(l=18, r=18, t=45, b=35),
+        )
+        donut.update_traces(domain=dict(x=[.02, .70], y=[.02, .98]))
     st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
