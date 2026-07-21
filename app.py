@@ -11,6 +11,11 @@ from typing import Iterable
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import FuncFormatter
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -91,7 +96,7 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 /* ---------- Chart cards ---------- */
 .chart-card {{background:white;border:1.2px solid {BORDER};border-radius:12px;padding:10px 12px 7px;box-shadow:0 4px 14px rgba(15,40,80,.09);}}
 .chart-title {{display:inline-block;background:linear-gradient(90deg,{NAVY_DARK},{NAVY_MID});color:white;padding:7px 20px;border-radius:7px;font-size:16px;font-weight:900;letter-spacing:.25px;margin:0 0 5px 10px;min-width:220px;text-align:center;}}
-div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;}}
+div[data-testid="stPlotlyChart"] {{margin-top:-3px;margin-bottom:-3px;background:#FFFFFF;border-radius:0 0 10px 10px;padding:0 4px 2px;}}
 
 
 /* ---------- Plotly chart typography ---------- */
@@ -290,7 +295,7 @@ def layout(fig: go.Figure, height: int, margins: dict | None = None) -> go.Figur
     fig.update_layout(
         height=height,
         margin=margins or dict(l=32, r=18, t=22, b=30),
-        paper_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(family="Arial Black", color=TEXT, size=16),
         hoverlabel=dict(bgcolor="white", font_size=16, font_family="Arial Black"),
@@ -313,31 +318,137 @@ def empty_chart(text: str, height: int = 220) -> go.Figure:
 def bar_chart(series: pd.Series, color: str, total: float) -> go.Figure:
     s = series.head(5).sort_values(ascending=True)
     if s.empty:
-        return empty_chart("No rejected quantity", 350)
+        return empty_chart("No rejected quantity", 430)
     labels = [f"{value:,.0f} ({value / total:.2%})" if total else f"{value:,.0f}" for value in s.values]
     fig = go.Figure(
         go.Bar(
             x=s.values,
             y=s.index,
             orientation="h",
-            marker=dict(color=color, line=dict(color="rgba(0,0,0,0.10)", width=1.0)),
+            marker=dict(color=color, line=dict(color="rgba(0,0,0,0.12)", width=1.0)),
             text=labels,
             textposition="outside",
             cliponaxis=False,
-            textfont=dict(size=18, color=TEXT, family="Arial Black"),
+            textfont=dict(size=20, color=TEXT, family="Arial Black"),
             hovertemplate="%{y}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
-    layout(fig, 470, dict(l=70, r=180, t=26, b=70))
-    fig.update_layout(showlegend=False)
-    fig.update_xaxes(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black"))
-    fig.update_yaxes(automargin=True, tickfont=dict(size=18, color=TEXT, family="Arial Black"))
+    max_label = max((len(str(x)) for x in s.index), default=10)
+    left_margin = min(300, max(145, max_label * 8 + 28))
+    layout(fig, 500, dict(l=left_margin, r=145, t=24, b=72))
+    fig.update_layout(showlegend=False, paper_bgcolor="white", plot_bgcolor="white")
+    fig.update_xaxes(title=dict(text="PCS", font=dict(size=20, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=18, color=TEXT, family="Arial Black"))
+    fig.update_yaxes(automargin=True, tickfont=dict(size=20, color=TEXT, family="Arial Black"), showgrid=False)
     return fig
 
 
+def _strip_html(text: str) -> str:
+    return re.sub(r"<[^>]+>", " ", str(text)).replace("  ", " ").strip()
+
+
 def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
-    """Render a Plotly figure as a high-resolution PNG using Kaleido."""
-    return fig.to_image(format="png", width=width, height=height, scale=2)
+    """Render the dashboard charts without Kaleido/Chrome.
+
+    This Matplotlib renderer supports the chart types used in this app:
+    grouped bar + rate line, horizontal ranking bars, and doughnut charts.
+    """
+    dpi = 150
+    mpl_fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+    mpl_fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    traces = list(fig.data)
+
+    pie = next((t for t in traces if getattr(t, "type", "") == "pie"), None)
+    horizontal = next((t for t in traces if getattr(t, "type", "") == "bar" and getattr(t, "orientation", None) == "h"), None)
+
+    if pie is not None:
+        labels = list(pie.labels or [])
+        values = np.asarray(list(pie.values or []), dtype=float)
+        colors_list = list(getattr(getattr(pie, "marker", None), "colors", None) or [GREEN, RED, ORANGE, PURPLE, BLUE])
+        wedges, _ = ax.pie(
+            values,
+            startangle=90,
+            counterclock=False,
+            colors=colors_list[:len(values)],
+            wedgeprops=dict(width=0.38, edgecolor="white", linewidth=2),
+        )
+        total = values.sum()
+        for wedge, value in zip(wedges, values):
+            share = value / total if total else 0
+            if share >= 0.025:
+                angle = (wedge.theta1 + wedge.theta2) / 2
+                x, y = 0.81 * np.cos(np.deg2rad(angle)), 0.81 * np.sin(np.deg2rad(angle))
+                ax.text(x, y, f"{share:.1%}", ha="center", va="center", color="white", fontsize=13, fontweight="bold")
+        center_text = f"{total:,.0f}\nTotal"
+        if getattr(fig.layout, "annotations", None):
+            center_text = _strip_html(fig.layout.annotations[0].text).replace("Total Defect", "\nTotal Defect")
+        ax.text(0, 0, center_text, ha="center", va="center", fontsize=19, fontweight="bold", color=TEXT)
+        ax.legend(wedges, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False, fontsize=12)
+        ax.axis("equal")
+        ax.axis("off")
+
+    elif horizontal is not None:
+        labels = [str(x) for x in horizontal.y]
+        values = np.asarray(list(horizontal.x), dtype=float)
+        color = getattr(getattr(horizontal, "marker", None), "color", NAVY_MID)
+        positions = np.arange(len(labels))
+        ax.barh(positions, values, color=color, height=0.62)
+        ax.set_yticks(positions)
+        ax.set_yticklabels(labels, fontsize=13, fontweight="bold", color=TEXT)
+        ax.tick_params(axis="x", labelsize=12, colors=TEXT)
+        ax.grid(axis="x", color=GRID, linewidth=0.8)
+        ax.set_axisbelow(True)
+        ax.set_xlabel("PCS", fontsize=13, fontweight="bold", color=TEXT)
+        max_value = float(values.max()) if len(values) else 1.0
+        text_values = list(horizontal.text or [f"{v:,.0f}" for v in values])
+        for y, value, label_text in zip(positions, values, text_values):
+            ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left", fontsize=12.5, fontweight="bold", color=TEXT)
+        ax.set_xlim(0, max_value * 1.34 if max_value else 1)
+        for spine in ("top", "right", "left"):
+            ax.spines[spine].set_visible(False)
+        ax.spines["bottom"].set_color("#AEBBCD")
+
+    else:
+        bar_traces = [t for t in traces if getattr(t, "type", "") == "bar"]
+        line_trace = next((t for t in traces if getattr(t, "type", "") == "scatter"), None)
+        categories = [str(x) for x in (bar_traces[0].x if bar_traces else (line_trace.x if line_trace is not None else []))]
+        pos = np.arange(len(categories))
+        bar_width = 0.34
+        for idx, trace in enumerate(bar_traces):
+            vals = np.asarray(list(trace.y), dtype=float)
+            offset = (idx - (len(bar_traces)-1)/2) * bar_width
+            color = getattr(getattr(trace, "marker", None), "color", NAVY)
+            bars = ax.bar(pos + offset, vals, width=bar_width, color=color, label=str(trace.name))
+            for rect, value in zip(bars, vals):
+                ax.text(rect.get_x()+rect.get_width()/2, rect.get_height(), f"{value:,.0f}", ha="center", va="bottom", fontsize=10.5, fontweight="bold", color=TEXT)
+        ax.set_xticks(pos)
+        ax.set_xticklabels(categories, fontsize=12, fontweight="bold", color=TEXT)
+        ax.set_ylabel("PCS", fontsize=13, fontweight="bold", color=TEXT)
+        ax.tick_params(axis="y", labelsize=11, colors=TEXT)
+        ax.grid(axis="y", color=GRID, linewidth=0.8)
+        ax.set_axisbelow(True)
+        handles, labels_legend = ax.get_legend_handles_labels()
+        if line_trace is not None:
+            ax2 = ax.twinx()
+            rate = np.asarray(list(line_trace.y), dtype=float)
+            line_color = getattr(getattr(line_trace, "line", None), "color", ORANGE)
+            ax2.plot(pos, rate, color=line_color, marker="o", linewidth=2.6, markersize=6.5, label=str(line_trace.name))
+            for x, value in zip(pos, rate):
+                ax2.text(x, value, f"{value:.2f}%", ha="center", va="bottom", fontsize=10.5, fontweight="bold", color=RED)
+            ax2.set_ylabel("%", fontsize=13, fontweight="bold", color=TEXT)
+            ax2.tick_params(axis="y", labelsize=11, colors=TEXT)
+            ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}%"))
+            h2, l2 = ax2.get_legend_handles_labels()
+            handles += h2; labels_legend += l2
+        ax.legend(handles, labels_legend, loc="upper left", bbox_to_anchor=(0, 1.12), ncol=3, frameon=False, fontsize=11)
+        for spine in ("top", "right"):
+            ax.spines[spine].set_visible(False)
+
+    mpl_fig.tight_layout(pad=1.8)
+    buffer = io.BytesIO()
+    mpl_fig.savefig(buffer, format="png", dpi=dpi, facecolor="white", bbox_inches="tight")
+    plt.close(mpl_fig)
+    return buffer.getvalue()
 
 
 def build_png_zip(figures: list[tuple[str, go.Figure]]) -> bytes:
@@ -953,7 +1064,7 @@ try:
         )
     st.caption("Xuất một file duy nhất bao gồm toàn bộ KPI, biểu đồ, insight và phần tổng kết của dashboard.")
 except Exception as export_error:
-    st.warning(f"Không thể tạo file dashboard: {export_error}. Kiểm tra kaleido trong requirements.txt.")
+    st.warning(f"Không thể tạo file dashboard: {export_error}")
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
