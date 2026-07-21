@@ -437,6 +437,158 @@ def build_pdf_report(
     return buffer.getvalue()
 
 
+
+
+def _dashboard_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load a clear font available on Streamlit Cloud, with a safe fallback."""
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+    ]
+    for candidate in candidates:
+        try:
+            return ImageFont.truetype(candidate, size=size)
+        except (OSError, IOError):
+            continue
+    return ImageFont.load_default()
+
+
+def _rounded_card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], radius: int = 22,
+                  fill: str = "#FFFFFF", outline: str = BORDER, width: int = 2) -> None:
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
+
+
+def _fit_text(draw: ImageDraw.ImageDraw, text: str, max_width: int, font_size: int,
+              min_size: int = 18, bold: bool = True) -> ImageFont.ImageFont:
+    size = font_size
+    while size > min_size:
+        font = _dashboard_font(size, bold)
+        if draw.textbbox((0, 0), text, font=font)[2] <= max_width:
+            return font
+        size -= 1
+    return _dashboard_font(min_size, bold)
+
+
+def _paste_chart(canvas: Image.Image, fig: go.Figure, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    width, height = x2 - x1, y2 - y1
+    png = Image.open(io.BytesIO(figure_png(fig, width=max(width, 900), height=max(height, 520)))).convert("RGB")
+    png.thumbnail((width, height), Image.Resampling.LANCZOS)
+    px = x1 + (width - png.width) // 2
+    py = y1 + (height - png.height) // 2
+    canvas.paste(png, (px, py))
+
+
+def build_full_dashboard_image(
+    report_month: str,
+    source: str,
+    metrics: list[tuple[str, str, str]],
+    insights: list[str],
+    figures: list[tuple[str, go.Figure]],
+    footer_metrics: list[tuple[str, str, str]],
+) -> Image.Image:
+    """Create one high-resolution image containing the complete dashboard."""
+    W, H = 2200, 2450
+    canvas = Image.new("RGB", (W, H), "#F3F6FB")
+    draw = ImageDraw.Draw(canvas)
+
+    # Header
+    draw.rounded_rectangle((30, 24, W - 30, 150), radius=28, fill=NAVY_DARK)
+    draw.text((70, 54), "IQC QUALITY DASHBOARD", font=_dashboard_font(50, True), fill="white")
+    subtitle = f"Month: {report_month}   |   Source: {source}"
+    draw.text((W - 70, 82), subtitle, font=_dashboard_font(24, True), fill="#D9E8FF", anchor="ra")
+
+    # KPI cards
+    card_gap = 20
+    card_y1, card_y2 = 180, 390
+    card_w = (W - 60 - card_gap * (len(metrics) - 1)) // len(metrics)
+    accent_fills = ["#EAF3FF", "#EAF8EE", "#FDECEC", "#FFF4E5", "#F3EDFF"]
+    for idx, (label, value, accent) in enumerate(metrics):
+        x1 = 30 + idx * (card_w + card_gap)
+        x2 = x1 + card_w
+        _rounded_card(draw, (x1, card_y1, x2, card_y2), fill="white")
+        draw.ellipse((x1 + 24, card_y1 + 46, x1 + 112, card_y1 + 134), fill=accent_fills[idx % len(accent_fills)])
+        draw.text((x1 + 68, card_y1 + 90), str(idx + 1), font=_dashboard_font(34, True), fill=accent, anchor="mm")
+        draw.text((x1 + 130, card_y1 + 50), label.upper(), font=_dashboard_font(23, True), fill=TEXT)
+        value_font = _fit_text(draw, value, card_w - 155, 43, 25, True)
+        draw.text((x1 + 130, card_y1 + 92), value, font=value_font, fill=accent)
+
+    # Main chart row
+    main_y1, main_y2 = 425, 1120
+    left_box = (30, main_y1, 1390, main_y2)
+    right_box = (1410, main_y1, W - 30, main_y2)
+    for box, title in [(left_box, figures[0][0]), (right_box, figures[1][0])]:
+        _rounded_card(draw, box, fill="white")
+        draw.rounded_rectangle((box[0] + 18, box[1] + 16, box[0] + 520, box[1] + 65), radius=12, fill=NAVY)
+        draw.text((box[0] + 36, box[1] + 27), title.upper(), font=_dashboard_font(24, True), fill="white")
+    _paste_chart(canvas, figures[0][1], (left_box[0] + 20, left_box[1] + 75, left_box[2] - 20, left_box[3] - 20))
+    _paste_chart(canvas, figures[1][1], (right_box[0] + 20, right_box[1] + 75, right_box[2] - 20, right_box[3] - 20))
+
+    # Insight strip
+    ins_y1, ins_y2 = 1150, 1365
+    draw.rounded_rectangle((30, ins_y1, W - 30, ins_y2), radius=22, fill="#FFF3C4", outline="#F1BE32", width=2)
+    draw.ellipse((55, ins_y1 + 50, 155, ins_y1 + 150), fill="#FDBB16")
+    draw.text((105, ins_y1 + 100), "!", font=_dashboard_font(50, True), fill=NAVY_DARK, anchor="mm")
+    draw.text((180, ins_y1 + 50), "KEY QUALITY\nINSIGHTS", font=_dashboard_font(28, True), fill=TEXT)
+    start_x = 430
+    insight_w = (W - start_x - 50) // max(len(insights), 1)
+    for idx, text in enumerate(insights):
+        x = start_x + idx * insight_w
+        if idx:
+            draw.line((x, ins_y1 + 30, x, ins_y2 - 30), fill="#D8B85F", width=2)
+        # Basic line wrapping
+        words, lines, current = text.split(), [], ""
+        font = _dashboard_font(20, True)
+        for word in words:
+            trial = (current + " " + word).strip()
+            if draw.textbbox((0, 0), trial, font=font)[2] <= insight_w - 34:
+                current = trial
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        draw.multiline_text((x + 18, ins_y1 + 45), "\n".join(lines[:5]), font=font, fill=TEXT, spacing=8)
+
+    # Three ranked charts
+    rank_y1, rank_y2 = 1395, 2115
+    rank_gap = 18
+    rank_w = (W - 60 - rank_gap * 2) // 3
+    for idx, (title, fig) in enumerate(figures[2:5]):
+        x1 = 30 + idx * (rank_w + rank_gap)
+        x2 = x1 + rank_w
+        _rounded_card(draw, (x1, rank_y1, x2, rank_y2), fill="white")
+        draw.rounded_rectangle((x1 + 18, rank_y1 + 16, x2 - 18, rank_y1 + 68), radius=12, fill=NAVY)
+        title_font = _fit_text(draw, title.upper(), rank_w - 70, 23, 17, True)
+        draw.text((x1 + 35, rank_y1 + 29), title.upper(), font=title_font, fill="white")
+        _paste_chart(canvas, fig, (x1 + 15, rank_y1 + 78, x2 - 15, rank_y2 - 15))
+
+    # Footer summary
+    foot_y1, foot_y2 = 2145, 2415
+    draw.rounded_rectangle((30, foot_y1, W - 30, foot_y2), radius=24, fill=NAVY_DARK)
+    footer_w = (W - 60) // max(len(footer_metrics), 1)
+    for idx, (label, value, accent) in enumerate(footer_metrics):
+        x1 = 30 + idx * footer_w
+        x2 = x1 + footer_w
+        if idx:
+            draw.line((x1, foot_y1 + 30, x1, foot_y2 - 30), fill="#4F6D97", width=2)
+        draw.text(((x1 + x2) // 2, foot_y1 + 48), label.upper(), font=_dashboard_font(20, True), fill="white", anchor="ma")
+        val_font = _fit_text(draw, value, footer_w - 30, 34, 20, True)
+        draw.text(((x1 + x2) // 2, foot_y1 + 112), value, font=val_font, fill=accent, anchor="ma")
+
+    return canvas
+
+
+def dashboard_image_bytes(image: Image.Image, output_format: str) -> tuple[bytes, str]:
+    buffer = io.BytesIO()
+    if output_format == "PDF":
+        image.convert("RGB").save(buffer, format="PDF", resolution=150.0)
+        return buffer.getvalue(), "application/pdf"
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue(), "image/png"
+
 # ============================================================
 # DATA SOURCE
 # ============================================================
@@ -617,7 +769,7 @@ with left:
         yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
     )
     month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Month Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text="Month", font=dict(size=18, color=TEXT, family="Arial Black")))
-    st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
+    st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
 with right:
@@ -658,7 +810,7 @@ with right:
         )
         layout(donut, 390, dict(l=8, r=28, t=30, b=12))
         donut.update_layout(legend=dict(orientation="v", y=.5, x=1.03, xanchor="left", font=dict(size=13, color=TEXT)))
-    st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
+    st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
@@ -708,49 +860,8 @@ for column, title, series, color in rank_specs:
     rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
-        st.plotly_chart(rank_fig, use_container_width=True, config={"displayModeBar": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"], "toImageButtonOptions": {"format": "png", "filename": "iqc_chart", "height": 900, "width": 1600, "scale": 2}})
+        st.plotly_chart(rank_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
         st.markdown('</div>', unsafe_allow_html=True)
-
-# ============================================================
-# EXPORT REPORT
-# ============================================================
-all_export_figures = [("Month-over-Month Performance", month_fig), ("Disposition", donut)] + rank_figures
-export_metrics = [
-    ("Total Received", number(received)),
-    ("Approved", number(approved)),
-    ("Rejected", number(rejected)),
-    ("Reject Rate", pct(reject_rate)),
-    ("Top Vendor", top_vendor),
-]
-export_insights = [
-    f"Top vendor: {top_vendor} — {number(top_vendor_qty)} rejected pcs",
-    f"Top inspection day: {top_day} — {number(top_day_qty)} rejected pcs",
-    f"Top item: {top_item} — {number(top_item_qty)} rejected pcs",
-    f"Top defect: {top_defect} — {number(top_defect_qty)} rejected pcs",
-]
-
-st.markdown('<div class="chart-card"><div class="chart-title">EXPORT DASHBOARD</div>', unsafe_allow_html=True)
-export_col1, export_col2, export_col3 = st.columns([1, 1, 2], gap="small")
-try:
-    pdf_bytes = build_pdf_report(month, source_name or "Uploaded file", export_metrics, export_insights, all_export_figures)
-    png_zip_bytes = build_png_zip([(name.replace(" ", "_").lower() + ".png", fig) for name, fig in all_export_figures])
-    with export_col1:
-        st.download_button(
-            "📄 Download PDF report", pdf_bytes,
-            file_name=f"IQC_Dashboard_{month}.pdf", mime="application/pdf",
-            use_container_width=True,
-        )
-    with export_col2:
-        st.download_button(
-            "🖼️ Download PNG charts", png_zip_bytes,
-            file_name=f"IQC_Dashboard_Charts_{month}.zip", mime="application/zip",
-            use_container_width=True,
-        )
-    with export_col3:
-        st.caption("Bạn cũng có thể bấm biểu tượng camera trên từng biểu đồ để tải riêng ảnh PNG chất lượng cao.")
-except Exception as export_error:
-    st.warning(f"Không thể tạo PDF/PNG tự động: {export_error}. Hãy kiểm tra thư viện kaleido trong requirements.txt.")
-st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
 # FOOTER SUMMARY
@@ -790,6 +901,60 @@ for icon, label, value, unit, value_class in summary:
     )
 footer_html += '</div>'
 st.markdown(footer_html, unsafe_allow_html=True)
+
+# ============================================================
+# ONE-BUTTON FULL DASHBOARD EXPORT
+# ============================================================
+full_figures = [("Month-over-Month Performance", month_fig), ("Disposition", donut)] + rank_figures
+full_metrics = [
+    ("Total Received", number(received), NAVY_MID),
+    ("Approved", number(approved), GREEN),
+    ("Rejected", number(rejected), RED),
+    ("Reject Rate", pct(reject_rate), ORANGE),
+    ("Top Vendor", top_vendor, PURPLE),
+]
+full_insights = [
+    f"Top vendor: {top_vendor} — {number(top_vendor_qty)} rejected pcs",
+    f"Top inspection day: {top_day} — {number(top_day_qty)} rejected pcs",
+    f"Top item: {top_item} — {number(top_item_qty)} rejected pcs",
+    f"Top defect: {top_defect} — {number(top_defect_qty)} rejected pcs",
+]
+full_footer = [
+    ("Total Inspection", number(to_inspect if to_inspect > 0 else record_count), "#FFFFFF"),
+    ("Total Accepted", number(approved), "#42D67B"),
+    ("Total Rejected", number(rejected), "#FF665C"),
+    ("Defect Rate", pct(reject_rate), "#FFD33D"),
+    ("Vendors", number(counter_count), "#FFFFFF"),
+    ("Items", number(filtered[c["item"]].replace("(Blank)", pd.NA).nunique()), "#FFFFFF"),
+]
+
+try:
+    dashboard_image = build_full_dashboard_image(
+        report_month=month,
+        source=source_name or "Uploaded file",
+        metrics=full_metrics,
+        insights=full_insights,
+        figures=full_figures,
+        footer_metrics=full_footer,
+    )
+    export_format_col, export_button_col = st.columns([1, 2], gap="small")
+    with export_format_col:
+        export_format = st.selectbox("Export format", ["PDF", "PNG"], label_visibility="collapsed")
+    export_bytes, export_mime = dashboard_image_bytes(dashboard_image, export_format)
+    extension = export_format.lower()
+    with export_button_col:
+        st.download_button(
+            "⬇️ EXPORT FULL DASHBOARD",
+            data=export_bytes,
+            file_name=f"IQC_Full_Dashboard_{month}.{extension}",
+            mime=export_mime,
+            use_container_width=True,
+            type="primary",
+        )
+    st.caption("Xuất một file duy nhất bao gồm toàn bộ KPI, biểu đồ, insight và phần tổng kết của dashboard.")
+except Exception as export_error:
+    st.warning(f"Không thể tạo file dashboard: {export_error}. Kiểm tra kaleido trong requirements.txt.")
+
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
     unsafe_allow_html=True,
