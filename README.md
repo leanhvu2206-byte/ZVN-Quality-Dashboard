@@ -1,15 +1,22 @@
-# IQC Quality Dashboard Ultra
+# IQC Quality Dashboard V5
 
-## Deploy on Streamlit Community Cloud
+Streamlit dashboard for IQC reporting.
 
-- Repository: your GitHub repository
-- Branch: `main`
-- Main file: `app.py`
+## Improvements in V5
+- KPI `TOP VENDOR` replaces `TOP LINE`.
+- Month-over-Month chart uses clear month labels such as `Apr 2026`, `May 2026`.
+- Top 5 Vendor / Item / Defect labels and values use larger bold fonts.
+- Each Plotly chart includes a camera button for high-resolution PNG export.
+- Export section provides a PDF report and ZIP package of PNG charts.
 
-## Shared default data
+## Deploy
+1. Replace `app.py`, `requirements.txt`, and `.streamlit/config.toml` in GitHub.
+2. Commit changes.
+3. Streamlit Community Cloud will redeploy automatically.
 
-Place your Excel file at:
+## Default shared data
+Place the shared Excel file at:
 
 `data/IQC_Data.xlsx`
 
-The app also allows users to upload XLSX, XLSM, XLS and CSV files.
+Do not upload confidential data to a public repository.
