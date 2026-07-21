@@ -352,7 +352,10 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
     This Matplotlib renderer supports the chart types used in this app:
     grouped bar + rate line, horizontal ranking bars, and doughnut charts.
     """
-    dpi = 150
+    dpi = 180
+    # Scale export typography with the requested image size so full-dashboard
+    # PNG/PDF remains readable when rendered at high resolution.
+    scale = max(1.0, min(2.2, width / 1200.0))
     mpl_fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
     mpl_fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
@@ -379,12 +382,12 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
             if share >= 0.025:
                 angle = (wedge.theta1 + wedge.theta2) / 2
                 x, y = 0.81 * np.cos(np.deg2rad(angle)), 0.81 * np.sin(np.deg2rad(angle))
-                ax.text(x, y, f"{share:.1%}", ha="center", va="center", color="white", fontsize=13, fontweight="bold")
+                ax.text(x, y, f"{share:.1%}", ha="center", va="center", color="white", fontsize=13 * scale, fontweight="bold")
         center_text = f"{total:,.0f}\nTotal"
         if getattr(fig.layout, "annotations", None):
             center_text = _strip_html(fig.layout.annotations[0].text).replace("Total Defect", "\nTotal Defect")
-        ax.text(0, 0, center_text, ha="center", va="center", fontsize=19, fontweight="bold", color=TEXT)
-        ax.legend(wedges, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False, fontsize=12)
+        ax.text(0, 0, center_text, ha="center", va="center", fontsize=19 * scale, fontweight="bold", color=TEXT)
+        ax.legend(wedges, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False, fontsize=12 * scale)
         ax.axis("equal")
         ax.axis("off")
 
@@ -395,16 +398,16 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
         positions = np.arange(len(labels))
         ax.barh(positions, values, color=color, height=0.62)
         ax.set_yticks(positions)
-        ax.set_yticklabels(labels, fontsize=13, fontweight="bold", color=TEXT)
-        ax.tick_params(axis="x", labelsize=12, colors=TEXT)
+        ax.set_yticklabels(labels, fontsize=13 * scale, fontweight="bold", color=TEXT)
+        ax.tick_params(axis="x", labelsize=12 * scale, colors=TEXT)
         ax.grid(axis="x", color=GRID, linewidth=0.8)
         ax.set_axisbelow(True)
-        ax.set_xlabel("PCS", fontsize=13, fontweight="bold", color=TEXT)
+        ax.set_xlabel("PCS", fontsize=13 * scale, fontweight="bold", color=TEXT)
         max_value = float(values.max()) if len(values) else 1.0
         horizontal_text = getattr(horizontal, "text", None)
         text_values = [f"{v:,.0f}" for v in values] if horizontal_text is None else list(horizontal_text)
         for y, value, label_text in zip(positions, values, text_values):
-            ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left", fontsize=12.5, fontweight="bold", color=TEXT)
+            ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left", fontsize=12.5 * scale, fontweight="bold", color=TEXT)
         ax.set_xlim(0, max_value * 1.34 if max_value else 1)
         for spine in ("top", "right", "left"):
             ax.spines[spine].set_visible(False)
@@ -422,10 +425,10 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
             color = getattr(getattr(trace, "marker", None), "color", NAVY)
             bars = ax.bar(pos + offset, vals, width=bar_width, color=color, label=str(trace.name))
             for rect, value in zip(bars, vals):
-                ax.text(rect.get_x()+rect.get_width()/2, rect.get_height(), f"{value:,.0f}", ha="center", va="bottom", fontsize=10.5, fontweight="bold", color=TEXT)
+                ax.text(rect.get_x()+rect.get_width()/2, rect.get_height(), f"{value:,.0f}", ha="center", va="bottom", fontsize=10.5 * scale, fontweight="bold", color=TEXT)
         ax.set_xticks(pos)
-        ax.set_xticklabels(categories, fontsize=12, fontweight="bold", color=TEXT)
-        ax.set_ylabel("PCS", fontsize=13, fontweight="bold", color=TEXT)
+        ax.set_xticklabels(categories, fontsize=12 * scale, fontweight="bold", color=TEXT)
+        ax.set_ylabel("PCS", fontsize=13 * scale, fontweight="bold", color=TEXT)
         ax.tick_params(axis="y", labelsize=11, colors=TEXT)
         ax.grid(axis="y", color=GRID, linewidth=0.8)
         ax.set_axisbelow(True)
@@ -434,15 +437,15 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
             ax2 = ax.twinx()
             rate = np.asarray(list(line_trace.y), dtype=float)
             line_color = getattr(getattr(line_trace, "line", None), "color", ORANGE)
-            ax2.plot(pos, rate, color=line_color, marker="o", linewidth=2.6, markersize=6.5, label=str(line_trace.name))
+            ax2.plot(pos, rate, color=line_color, marker="o", linewidth=2.6 * scale, markersize=6.5 * scale, label=str(line_trace.name))
             for x, value in zip(pos, rate):
                 ax2.text(x, value, f"{value:.2f}%", ha="center", va="bottom", fontsize=10.5, fontweight="bold", color=RED)
-            ax2.set_ylabel("%", fontsize=13, fontweight="bold", color=TEXT)
+            ax2.set_ylabel("%", fontsize=13 * scale, fontweight="bold", color=TEXT)
             ax2.tick_params(axis="y", labelsize=11, colors=TEXT)
             ax2.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}%"))
             h2, l2 = ax2.get_legend_handles_labels()
             handles += h2; labels_legend += l2
-        ax.legend(handles, labels_legend, loc="upper left", bbox_to_anchor=(0, 1.12), ncol=3, frameon=False, fontsize=11)
+        ax.legend(handles, labels_legend, loc="upper left", bbox_to_anchor=(0, 1.12), ncol=3, frameon=False, fontsize=11 * scale)
         for spine in ("top", "right"):
             ax.spines[spine].set_visible(False)
 
@@ -602,19 +605,19 @@ def build_full_dashboard_image(
     footer_metrics: list[tuple[str, str, str]],
 ) -> Image.Image:
     """Create one high-resolution image containing the complete dashboard."""
-    W, H = 2200, 2450
+    W, H = 4200, 2600
     canvas = Image.new("RGB", (W, H), "#F3F6FB")
     draw = ImageDraw.Draw(canvas)
 
     # Header
     draw.rounded_rectangle((30, 24, W - 30, 150), radius=28, fill=NAVY_DARK)
-    draw.text((70, 54), "IQC QUALITY DASHBOARD", font=_dashboard_font(50, True), fill="white")
+    draw.text((70, 54), "IQC QUALITY DASHBOARD", font=_dashboard_font(72, True), fill="white")
     subtitle = f"Month: {report_month}   |   Source: {source}"
-    draw.text((W - 70, 82), subtitle, font=_dashboard_font(24, True), fill="#D9E8FF", anchor="ra")
+    draw.text((W - 70, 82), subtitle, font=_dashboard_font(44, True), fill="#D9E8FF", anchor="ra")
 
     # KPI cards
     card_gap = 20
-    card_y1, card_y2 = 180, 390
+    card_y1, card_y2 = 180, 470
     card_w = (W - 60 - card_gap * (len(metrics) - 1)) // len(metrics)
     accent_fills = ["#EAF3FF", "#EAF8EE", "#FDECEC", "#FFF4E5", "#F3EDFF"]
     for idx, (label, value, accent) in enumerate(metrics):
@@ -623,27 +626,27 @@ def build_full_dashboard_image(
         _rounded_card(draw, (x1, card_y1, x2, card_y2), fill="white")
         draw.ellipse((x1 + 24, card_y1 + 46, x1 + 112, card_y1 + 134), fill=accent_fills[idx % len(accent_fills)])
         draw.text((x1 + 68, card_y1 + 90), str(idx + 1), font=_dashboard_font(34, True), fill=accent, anchor="mm")
-        draw.text((x1 + 130, card_y1 + 50), label.upper(), font=_dashboard_font(23, True), fill=TEXT)
-        value_font = _fit_text(draw, value, card_w - 155, 43, 25, True)
+        draw.text((x1 + 130, card_y1 + 50), label.upper(), font=_dashboard_font(31, True), fill=TEXT)
+        value_font = _fit_text(draw, value, card_w - 155, 58, 34, True)
         draw.text((x1 + 130, card_y1 + 92), value, font=value_font, fill=accent)
 
     # Main chart row
-    main_y1, main_y2 = 425, 1120
-    left_box = (30, main_y1, 1390, main_y2)
-    right_box = (1410, main_y1, W - 30, main_y2)
+    main_y1, main_y2 = 510, 1390
+    left_box = (30, main_y1, 2730, main_y2)
+    right_box = (2760, main_y1, W - 30, main_y2)
     for box, title in [(left_box, figures[0][0]), (right_box, figures[1][0])]:
         _rounded_card(draw, box, fill="white")
-        draw.rounded_rectangle((box[0] + 18, box[1] + 16, box[0] + 520, box[1] + 65), radius=12, fill=NAVY)
-        draw.text((box[0] + 36, box[1] + 27), title.upper(), font=_dashboard_font(24, True), fill="white")
+        draw.rounded_rectangle((box[0] + 18, box[1] + 16, box[0] + 760, box[1] + 65), radius=12, fill=NAVY)
+        draw.text((box[0] + 36, box[1] + 27), title.upper(), font=_dashboard_font(32, True), fill="white")
     _paste_chart(canvas, figures[0][1], (left_box[0] + 20, left_box[1] + 75, left_box[2] - 20, left_box[3] - 20))
     _paste_chart(canvas, figures[1][1], (right_box[0] + 20, right_box[1] + 75, right_box[2] - 20, right_box[3] - 20))
 
     # Insight strip
-    ins_y1, ins_y2 = 1150, 1365
+    ins_y1, ins_y2 = 1420, 1690
     draw.rounded_rectangle((30, ins_y1, W - 30, ins_y2), radius=22, fill="#FFF3C4", outline="#F1BE32", width=2)
     draw.ellipse((55, ins_y1 + 50, 155, ins_y1 + 150), fill="#FDBB16")
     draw.text((105, ins_y1 + 100), "!", font=_dashboard_font(50, True), fill=NAVY_DARK, anchor="mm")
-    draw.text((180, ins_y1 + 50), "KEY QUALITY\nINSIGHTS", font=_dashboard_font(28, True), fill=TEXT)
+    draw.text((180, ins_y1 + 50), "KEY QUALITY\nINSIGHTS", font=_dashboard_font(38, True), fill=TEXT)
     start_x = 430
     insight_w = (W - start_x - 50) // max(len(insights), 1)
     for idx, text in enumerate(insights):
@@ -652,7 +655,7 @@ def build_full_dashboard_image(
             draw.line((x, ins_y1 + 30, x, ins_y2 - 30), fill="#D8B85F", width=2)
         # Basic line wrapping
         words, lines, current = text.split(), [], ""
-        font = _dashboard_font(20, True)
+        font = _dashboard_font(28, True)
         for word in words:
             trial = (current + " " + word).strip()
             if draw.textbbox((0, 0), trial, font=font)[2] <= insight_w - 34:
@@ -663,23 +666,23 @@ def build_full_dashboard_image(
                 current = word
         if current:
             lines.append(current)
-        draw.multiline_text((x + 18, ins_y1 + 45), "\n".join(lines[:5]), font=font, fill=TEXT, spacing=8)
+        draw.multiline_text((x + 18, ins_y1 + 45), "\n".join(lines[:5]), font=font, fill=TEXT, spacing=12)
 
     # Three ranked charts
-    rank_y1, rank_y2 = 1395, 2115
-    rank_gap = 18
+    rank_y1, rank_y2 = 1720, 2320
+    rank_gap = 28
     rank_w = (W - 60 - rank_gap * 2) // 3
     for idx, (title, fig) in enumerate(figures[2:5]):
         x1 = 30 + idx * (rank_w + rank_gap)
         x2 = x1 + rank_w
         _rounded_card(draw, (x1, rank_y1, x2, rank_y2), fill="white")
         draw.rounded_rectangle((x1 + 18, rank_y1 + 16, x2 - 18, rank_y1 + 68), radius=12, fill=NAVY)
-        title_font = _fit_text(draw, title.upper(), rank_w - 70, 23, 17, True)
+        title_font = _fit_text(draw, title.upper(), rank_w - 70, 32, 23, True)
         draw.text((x1 + 35, rank_y1 + 29), title.upper(), font=title_font, fill="white")
         _paste_chart(canvas, fig, (x1 + 15, rank_y1 + 78, x2 - 15, rank_y2 - 15))
 
     # Footer summary
-    foot_y1, foot_y2 = 2145, 2415
+    foot_y1, foot_y2 = 2350, 2570
     draw.rounded_rectangle((30, foot_y1, W - 30, foot_y2), radius=24, fill=NAVY_DARK)
     footer_w = (W - 60) // max(len(footer_metrics), 1)
     for idx, (label, value, accent) in enumerate(footer_metrics):
@@ -687,8 +690,8 @@ def build_full_dashboard_image(
         x2 = x1 + footer_w
         if idx:
             draw.line((x1, foot_y1 + 30, x1, foot_y2 - 30), fill="#4F6D97", width=2)
-        draw.text(((x1 + x2) // 2, foot_y1 + 48), label.upper(), font=_dashboard_font(20, True), fill="white", anchor="ma")
-        val_font = _fit_text(draw, value, footer_w - 30, 34, 20, True)
+        draw.text(((x1 + x2) // 2, foot_y1 + 48), label.upper(), font=_dashboard_font(28, True), fill="white", anchor="ma")
+        val_font = _fit_text(draw, value, footer_w - 30, 46, 28, True)
         draw.text(((x1 + x2) // 2, foot_y1 + 112), value, font=val_font, fill=accent, anchor="ma")
 
     return canvas
@@ -697,7 +700,7 @@ def build_full_dashboard_image(
 def dashboard_image_bytes(image: Image.Image, output_format: str) -> tuple[bytes, str]:
     buffer = io.BytesIO()
     if output_format == "PDF":
-        image.convert("RGB").save(buffer, format="PDF", resolution=150.0)
+        image.convert("RGB").save(buffer, format="PDF", resolution=220.0)
         return buffer.getvalue(), "application/pdf"
     image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue(), "image/png"
