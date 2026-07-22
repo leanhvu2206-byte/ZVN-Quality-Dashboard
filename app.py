@@ -332,6 +332,12 @@ def prepare(source: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     # Rebuild the reporting month solely from the parsed reporting date.
     # Any pre-existing Year-Month helper is intentionally ignored.
     df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
+    iso_calendar = df[date_col].dt.isocalendar()
+    df["Year-Week"] = (
+        iso_calendar["year"].astype("Int64").astype(str)
+        + "-W"
+        + iso_calendar["week"].astype("Int64").astype(str).str.zfill(2)
+    )
 
     # Keep rows with a valid reporting month. A valid date is still needed for
     # daily calculations, but an existing Year-Month column can preserve rows
@@ -923,7 +929,7 @@ def dashboard_pages_bytes(images: list[Image.Image], output_format: str) -> tupl
 # DATA SOURCE
 # ============================================================
 with st.container(key="topbar"):
-    title_col, month_col, vendor_col, item_col = st.columns([3.8, .8, .8, .8], gap="small")
+    title_col, month_col, week_col, vendor_col, item_col = st.columns([3.35, .72, .72, .72, .72], gap="small")
     with title_col:
         st.markdown(
             '<div class="dash-title"><span class="dash-title-icon">📋</span>IQC QUALITY DASHBOARD</div>'
@@ -933,6 +939,7 @@ with st.container(key="topbar"):
 
     # Data is loaded before filters below. Placeholders are created here and filled later.
     month_placeholder = month_col.empty()
+    week_placeholder = week_col.empty()
     vendor_placeholder = vendor_col.empty()
     item_placeholder = item_col.empty()
 
@@ -972,18 +979,26 @@ except Exception as exc:
 months = sorted(df["Year-Month"].dropna().unique(), reverse=True)
 month_options = ["All"] + months
 with month_placeholder.container():
-    month = st.selectbox("Month (Year-Month)", month_options, index=1 if months else 0, key="month_filter")
+    month = st.selectbox("Month", month_options, index=1 if months else 0, key="month_filter")
+
 month_df = df.copy() if month == "All" else df[df["Year-Month"] == month].copy()
 
-vendor_options = ["(All)"] + sorted(x for x in month_df[c["vendor"]].unique() if x != "(Blank)")
+weeks = sorted(month_df["Year-Week"].dropna().unique(), reverse=True)
+week_options = ["(All)"] + weeks
+with week_placeholder.container():
+    week = st.selectbox("Week", week_options, key="week_filter")
+
+week_df = month_df.copy() if week == "(All)" else month_df[month_df["Year-Week"] == week].copy()
+
+vendor_options = ["(All)"] + sorted(x for x in week_df[c["vendor"]].unique() if x != "(Blank)")
 with vendor_placeholder.container():
     vendor = st.selectbox("Vendor", vendor_options, key="vendor_filter")
 
-item_options = ["(All)"] + sorted(x for x in month_df[c["item"]].unique() if x != "(Blank)")
+item_options = ["(All)"] + sorted(x for x in week_df[c["item"]].unique() if x != "(Blank)")
 with item_placeholder.container():
     item = st.selectbox("Item", item_options, key="item_filter")
 
-filtered = month_df.copy()
+filtered = week_df.copy()
 if vendor != "(All)":
     filtered = filtered[filtered[c["vendor"]] == vendor]
 if item != "(All)":
@@ -1103,17 +1118,53 @@ st.markdown(kpi_html, unsafe_allow_html=True)
 left, right = st.columns([58, 42], gap="small")
 
 with left:
-    st.markdown('<div class="chart-card"><div class="chart-title">MONTH-OVER-MONTH PERFORMANCE</div>', unsafe_allow_html=True)
-    monthly = df.groupby("Year-Month").agg(Output=(c["received"], "sum"), Defect=(c["rejected"], "sum")).sort_index()
-    # Show only months that truly contain activity. This also prevents empty or
-    # incorrectly parsed months from appearing on the chart.
-    monthly = monthly[(monthly["Output"] > 0) | (monthly["Defect"] > 0)].tail(7)
-    monthly["Defect Rate"] = (monthly["Defect"] / monthly["Output"].replace(0, pd.NA) * 100).fillna(0)
-    monthly["Month Label"] = [pd.Period(x, freq="M").strftime("%b %Y") for x in monthly.index]
+    # The trend chart changes granularity with the selected filters:
+    # All months -> monthly; one month -> weekly; one week -> daily.
+    trend_source = df.copy()
+    if vendor != "(All)":
+        trend_source = trend_source[trend_source[c["vendor"]] == vendor]
+    if item != "(All)":
+        trend_source = trend_source[trend_source[c["item"]] == item]
 
+    if week != "(All)":
+        trend_source = trend_source[trend_source["Year-Week"] == week]
+        trend = (
+            trend_source.groupby(trend_source[c["date"]].dt.date)
+            .agg(Output=(c["received"], "sum"), Defect=(c["rejected"], "sum"))
+            .sort_index()
+        )
+        trend["Label"] = [pd.Timestamp(x).strftime("%d %b") for x in trend.index]
+        trend_title = f"DAILY PERFORMANCE — {week}"
+        x_axis_title = "Day"
+    elif month != "All":
+        trend_source = trend_source[trend_source["Year-Month"] == month]
+        trend = (
+            trend_source.groupby("Year-Week")
+            .agg(Output=(c["received"], "sum"), Defect=(c["rejected"], "sum"))
+            .sort_index()
+        )
+        trend["Label"] = trend.index.astype(str)
+        trend_title = f"WEEKLY PERFORMANCE — {pd.Period(month, freq='M').strftime('%b %Y')}"
+        x_axis_title = "Week"
+    else:
+        trend = (
+            trend_source.groupby("Year-Month")
+            .agg(Output=(c["received"], "sum"), Defect=(c["rejected"], "sum"))
+            .sort_index()
+        )
+        trend = trend.tail(7)
+        trend["Label"] = [pd.Period(x, freq="M").strftime("%b %Y") for x in trend.index]
+        trend_title = "MONTH-OVER-MONTH PERFORMANCE"
+        x_axis_title = "Month"
+
+    trend = trend[(trend["Output"] > 0) | (trend["Defect"] > 0)].copy()
+    trend["Defect Rate"] = (trend["Defect"] / trend["Output"].replace(0, pd.NA) * 100).fillna(0)
+
+    st.markdown(f'<div class="chart-card"><div class="chart-title">{trend_title}</div>', unsafe_allow_html=True)
+    monthly = trend
     month_fig = go.Figure()
     month_fig.add_bar(
-        x=monthly["Month Label"],
+        x=monthly["Label"],
         y=monthly["Output"],
         name="Output (pcs)",
         marker=dict(color=NAVY, line=dict(color=NAVY_DARK, width=1.1)),
@@ -1124,7 +1175,7 @@ with left:
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
-        x=monthly["Month Label"],
+        x=monthly["Label"],
         y=monthly["Defect"],
         name="Defect (pcs)",
         marker=dict(color=RED, line=dict(color="#B42318", width=1.1)),
@@ -1135,7 +1186,7 @@ with left:
     )
     month_fig.add_trace(
         go.Scatter(
-            x=monthly["Month Label"],
+            x=monthly["Label"],
             y=monthly["Defect Rate"],
             yaxis="y2",
             name="Defect Rate (%)",
@@ -1158,7 +1209,7 @@ with left:
         yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black"), range=[0, max(float(monthly["Output"].max()) * 1.20, 1)]),
         yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
     )
-    month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Month Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text="Month", font=dict(size=18, color=TEXT, family="Arial Black")))
+    month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text=x_axis_title, font=dict(size=18, color=TEXT, family="Arial Black")))
     st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1362,6 +1413,6 @@ with st.expander("🔎 View filtered data"):
     st.download_button(
         "Download filtered CSV",
         filtered.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"IQC_filtered_{month}.csv",
+        file_name=f"IQC_filtered_{month}_{week}.csv",
         mime="text/csv",
     )
