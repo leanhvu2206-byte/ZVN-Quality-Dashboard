@@ -169,6 +169,7 @@ ALIASES = {
     "counter": ["Counter", "Inspector", "Created By", "Employee"],
     "inspection_time": ["Inspection Time", "Duration", "Total Inspection Time"],
     "year_month": ["Year-Month", "Year Month", "Month-Year", "Month Year"],
+    "date_created": ["Date Created", "Created Date", "Created On"],
 }
 
 
@@ -320,19 +321,42 @@ def prepare(source: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     date_col = cols["date"]
     assert date_col is not None
 
-    # Parse the actual date safely. This avoids swapping 05/06 and 06/05.
-    df[date_col] = parse_date_series(df[date_col])
+    # Parse the receipt date safely.
+    raw_receipt_date = df[date_col].copy()
+    df[date_col] = parse_date_series(raw_receipt_date)
 
-    # Prefer the source Year-Month field when it exists because NetSuite/Excel
-    # exports often already provide the correct reporting month. Only derive
-    # Year-Month from the date when the source field is absent or invalid.
-    source_ym_col = cols.get("year_month")
-    if source_ym_col and source_ym_col in df.columns:
-        normalized_ym = normalize_year_month(df[source_ym_col])
-        derived_ym = df[date_col].dt.strftime("%Y-%m")
-        df["Year-Month"] = normalized_ym.fillna(derived_ym)
-    else:
-        df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
+    # Correct dates that were already converted with month/day swapped before
+    # reaching this function. Date Created is used as a reliable cross-check.
+    # Example: receipt 2026-05-06 but Date Created is 2026-06-05 -> 2026-06-05.
+    created_col = cols.get("date_created")
+    if created_col and created_col in df.columns:
+        created_dates = parse_date_series(df[created_col])
+        receipt_dates = df[date_col].copy()
+
+        valid = receipt_dates.notna() & created_dates.notna()
+        same_year = receipt_dates.dt.year.eq(created_dates.dt.year)
+        different_month = receipt_dates.dt.month.ne(created_dates.dt.month)
+        swapped_matches = (
+            receipt_dates.dt.day.eq(created_dates.dt.month)
+            & receipt_dates.dt.month.eq(created_dates.dt.day)
+        )
+        swap_mask = valid & same_year & different_month & swapped_matches
+
+        if swap_mask.any():
+            corrected = pd.to_datetime(
+                {
+                    "year": receipt_dates.loc[swap_mask].dt.year,
+                    "month": receipt_dates.loc[swap_mask].dt.day,
+                    "day": receipt_dates.loc[swap_mask].dt.month,
+                },
+                errors="coerce",
+            )
+            df.loc[swap_mask, date_col] = corrected.values
+
+    # Always derive the reporting month from the corrected receipt date.
+    # Do not trust a pre-existing Year-Month helper because it may have been
+    # calculated from a wrongly interpreted date.
+    df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
 
     # Keep rows with a valid reporting month. A valid date is still needed for
     # daily calculations, but an existing Year-Month column can preserve rows
