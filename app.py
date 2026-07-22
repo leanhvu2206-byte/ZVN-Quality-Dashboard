@@ -965,8 +965,8 @@ defect_group_rej = (
 )
 top_defect_group = str(defect_group_rej.index[0]) if len(defect_group_rej) and defect_group_rej.iloc[0] > 0 else "-"
 top_defect_group_qty = float(defect_group_rej.iloc[0]) if len(defect_group_rej) else 0.0
-top3_vendor_qty = float(vendor_rej.head(3).sum()) if len(vendor_rej) else 0.0
-top3_vendor_share = top3_vendor_qty / rejected if rejected else 0.0
+top1_vendor_qty = float(vendor_rej.iloc[0]) if len(vendor_rej) else 0.0
+top1_vendor_share = top1_vendor_qty / rejected if rejected else 0.0
 
 # ============================================================
 # KPI ROW
@@ -1161,7 +1161,7 @@ insight_html = f"""
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top PO reject</span><b>{safe(top_po)}</b><span class="insight-note">{number(top_po_qty)} rejected pcs</span></div></div>
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top inspection day by reject</span><b>{safe(top_day)}</b><span class="insight-note">{number(top_day_qty)} rejected pcs</span></div></div>
   <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top defect group</span><b>{safe(top_defect_group)}</b><span class="insight-note">{number(top_defect_group_qty)} rejected pcs</span></div></div>
-  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top 3 vendors contribution</span><b>{pct(top3_vendor_share)}</b><span class="insight-note">{number(top3_vendor_qty)} of {number(rejected)} rejected pcs</span></div></div>
+  <div class="insight-item"><div class="insight-copy"><span class="insight-label">Top 1 vendor</span><b>{safe(top_vendor)}</b><span class="insight-note">{number(top1_vendor_qty)} rejected pcs · {pct(top1_vendor_share)} of total rejects</span></div></div>
 </div>
 """
 st.markdown(insight_html, unsafe_allow_html=True)
@@ -1193,21 +1193,15 @@ counter_count = filtered[c["counter"]].replace("(Blank)", pd.NA).nunique()
 if counter_count == 0:
     counter_count = filtered[c["vendor"]].replace("(Blank)", pd.NA).nunique()
 
-inspection_time_text = "N/A"
-time_col = c.get("inspection_time")
-if time_col and time_col in filtered.columns and pd.api.types.is_timedelta64_dtype(filtered[time_col]):
-    total_seconds = int(filtered[time_col].dropna().dt.total_seconds().sum())
-    hours, rem = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(rem, 60)
-    inspection_time_text = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+supplier_ppm = (rejected / received * 1_000_000) if received else 0.0
 
 summary = [
-    ("📋", "TOTAL INSPECTION", number(to_inspect if to_inspect > 0 else record_count), "Times / PCS", ""),
+    ("📦", "TOTAL RECEIVED", number(received), "PCS", ""),
     ("✓", "TOTAL ACCEPTED", number(approved), pct(accepted_rate), "accepted"),
     ("✕", "TOTAL REJECTED", number(rejected), pct(reject_rate), "rejected"),
-    ("%", "DEFECT RATE", pct(reject_rate), "Rejected / Output", "rate"),
+    ("%", "DEFECT RATE", pct(reject_rate), "Rejected / Received", "rate"),
     ("👤", "TOTAL COUNTER", number(counter_count), "People / Suppliers", ""),
-    ("◷", "INSPECTION TIME", inspection_time_text, "HH:MM:SS", ""),
+    ("PPM", "SUPPLIER PPM", number(round(supplier_ppm)), "Rejected / Received × 1,000,000", "rate"),
 ]
 footer_html = '<div class="summary-strip">'
 for icon, label, value, unit, value_class in summary:
@@ -1238,15 +1232,15 @@ full_insights = [
     f"Top PO reject: {top_po} — {number(top_po_qty)} rejected pcs",
     f"Top inspection day by reject: {top_day} — {number(top_day_qty)} rejected pcs",
     f"Top defect group: {top_defect_group} — {number(top_defect_group_qty)} rejected pcs",
-    f"Top 3 vendors contribution: {pct(top3_vendor_share)} — {number(top3_vendor_qty)} rejected pcs",
+    f"Top 1 vendor: {top_vendor} — {number(top1_vendor_qty)} rejected pcs ({pct(top1_vendor_share)})",
 ]
 full_footer = [
-    ("Total Inspection", number(to_inspect if to_inspect > 0 else record_count), "#FFFFFF"),
+    ("Total Received", number(received), "#FFFFFF"),
     ("Total Accepted", number(approved), "#42D67B"),
     ("Total Rejected", number(rejected), "#FF665C"),
     ("Defect Rate", pct(reject_rate), "#FFD33D"),
     ("Vendors", number(counter_count), "#FFFFFF"),
-    ("Items", number(filtered[c["item"]].replace("(Blank)", pd.NA).nunique()), "#FFFFFF"),
+    ("Supplier PPM", number(round(supplier_ppm)), "#FFD33D"),
 ]
 
 st.markdown('<div style="margin-top:12px;font-size:18px;font-weight:900;color:#062B63">⬇️ EXPORT PROFESSIONAL REPORT</div>', unsafe_allow_html=True)
