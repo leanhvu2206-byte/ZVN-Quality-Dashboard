@@ -6,6 +6,7 @@ import re
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from datetime import date, datetime
 from typing import Iterable
 
 import pandas as pd
@@ -167,6 +168,7 @@ ALIASES = {
     "receipt": ["Item Receipt", "Document Number", "Receipt Number"],
     "counter": ["Counter", "Inspector", "Created By", "Employee"],
     "inspection_time": ["Inspection Time", "Duration", "Total Inspection Time"],
+    "year_month": ["Year-Month", "Year Month", "Month-Year", "Month Year"],
 }
 
 
@@ -242,6 +244,72 @@ def default_data() -> tuple[pd.DataFrame | None, str | None]:
     return None, None
 
 
+
+def parse_date_series(series: pd.Series) -> pd.Series:
+    """Parse mixed Excel/CSV dates without swapping day and month.
+
+    Rules:
+    - Existing datetime values are preserved.
+    - Excel serial numbers are converted from 1899-12-30.
+    - ISO strings (yyyy-mm-dd) are parsed as ISO.
+    - Slash/dash strings such as dd/mm/yyyy are parsed day-first.
+    """
+    result = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+
+    # Preserve values that pandas/openpyxl already returned as datetime objects.
+    is_dt = series.map(lambda value: isinstance(value, (pd.Timestamp, datetime, date)))
+    if is_dt.any():
+        result.loc[is_dt] = pd.to_datetime(series.loc[is_dt], errors="coerce")
+
+    remaining = result.isna() & series.notna()
+    if not remaining.any():
+        return result
+
+    # Excel serial dates, normally values around 40,000-60,000.
+    numeric = pd.to_numeric(series.loc[remaining], errors="coerce")
+    serial_mask = numeric.between(1, 100000, inclusive="both")
+    if serial_mask.any():
+        serial_index = numeric.index[serial_mask]
+        result.loc[serial_index] = pd.to_datetime(
+            numeric.loc[serial_index], unit="D", origin="1899-12-30", errors="coerce"
+        )
+
+    remaining = result.isna() & series.notna()
+    if remaining.any():
+        values = series.loc[remaining].astype(str).str.strip()
+
+        # ISO dates are unambiguous and must not be parsed with dayfirst=True.
+        iso_mask = values.str.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}")
+        if iso_mask.any():
+            iso_index = values.index[iso_mask]
+            result.loc[iso_index] = pd.to_datetime(
+                values.loc[iso_index], errors="coerce", yearfirst=True
+            )
+
+        # Vietnamese/export dates are generally dd/mm/yyyy.
+        non_iso_index = values.index[~iso_mask]
+        if len(non_iso_index):
+            result.loc[non_iso_index] = pd.to_datetime(
+                values.loc[non_iso_index], errors="coerce", dayfirst=True
+            )
+
+    return result
+
+
+def normalize_year_month(series: pd.Series) -> pd.Series:
+    """Normalize an existing Year-Month column to yyyy-mm."""
+    raw = series.astype(str).str.strip()
+    extracted = raw.str.extract(r"(?P<year>20\d{2})\D*(?P<month>\d{1,2})")
+    month_num = pd.to_numeric(extracted["month"], errors="coerce")
+    valid = extracted["year"].notna() & month_num.between(1, 12)
+    result = pd.Series(pd.NA, index=series.index, dtype="string")
+    result.loc[valid] = (
+        extracted.loc[valid, "year"].astype(str)
+        + "-"
+        + month_num.loc[valid].astype(int).astype(str).str.zfill(2)
+    )
+    return result
+
 def prepare(source: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     cols = {key: find_col(source, aliases) for key, aliases in ALIASES.items()}
     missing = [key for key in ("date", "received", "rejected", "item") if not cols[key]]
@@ -251,11 +319,25 @@ def prepare(source: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     df = source.copy()
     date_col = cols["date"]
     assert date_col is not None
-    # IQC exports commonly use Vietnamese day/month/year dates.
-    # dayfirst=True prevents 05/06/2026 from being misread as May 6.
-    df[date_col] = pd.to_datetime(df[date_col], errors="coerce", dayfirst=True)
-    df = df[df[date_col].notna()].copy()
-    df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
+
+    # Parse the actual date safely. This avoids swapping 05/06 and 06/05.
+    df[date_col] = parse_date_series(df[date_col])
+
+    # Prefer the source Year-Month field when it exists because NetSuite/Excel
+    # exports often already provide the correct reporting month. Only derive
+    # Year-Month from the date when the source field is absent or invalid.
+    source_ym_col = cols.get("year_month")
+    if source_ym_col and source_ym_col in df.columns:
+        normalized_ym = normalize_year_month(df[source_ym_col])
+        derived_ym = df[date_col].dt.strftime("%Y-%m")
+        df["Year-Month"] = normalized_ym.fillna(derived_ym)
+    else:
+        df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
+
+    # Keep rows with a valid reporting month. A valid date is still needed for
+    # daily calculations, but an existing Year-Month column can preserve rows
+    # whose raw date text is blank or malformed.
+    df = df[df["Year-Month"].notna()].copy()
 
     numeric_keys = ["received", "approved", "rejected", "reworked", "special", "quarantine", "to_inspect"]
     for key in numeric_keys:
