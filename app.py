@@ -246,18 +246,15 @@ def default_data() -> tuple[pd.DataFrame | None, str | None]:
 
 
 
-def parse_date_series(series: pd.Series) -> pd.Series:
-    """Parse mixed Excel/CSV dates without swapping day and month.
+def parse_date_series(series: pd.Series, *, month_first: bool = False) -> pd.Series:
+    """Parse Excel/CSV dates safely.
 
-    Rules:
-    - Existing datetime values are preserved.
-    - Excel serial numbers are converted from 1899-12-30.
-    - ISO strings (yyyy-mm-dd) are parsed as ISO.
-    - Slash/dash strings such as dd/mm/yyyy are parsed day-first.
+    When ``month_first=True``, text dates are interpreted using the US format
+    M/D/YYYY (or M/D/YYYY HH:MM:SS). Existing datetime values and Excel serial
+    numbers are preserved.
     """
     result = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
 
-    # Preserve values that pandas/openpyxl already returned as datetime objects.
     is_dt = series.map(lambda value: isinstance(value, (pd.Timestamp, datetime, date)))
     if is_dt.any():
         result.loc[is_dt] = pd.to_datetime(series.loc[is_dt], errors="coerce")
@@ -266,7 +263,6 @@ def parse_date_series(series: pd.Series) -> pd.Series:
     if not remaining.any():
         return result
 
-    # Excel serial dates, normally values around 40,000-60,000.
     numeric = pd.to_numeric(series.loc[remaining], errors="coerce")
     serial_mask = numeric.between(1, 100000, inclusive="both")
     if serial_mask.any():
@@ -279,23 +275,25 @@ def parse_date_series(series: pd.Series) -> pd.Series:
     if remaining.any():
         values = series.loc[remaining].astype(str).str.strip()
 
-        # ISO dates are unambiguous and must not be parsed with dayfirst=True.
         iso_mask = values.str.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}")
         if iso_mask.any():
-            iso_index = values.index[iso_mask]
-            result.loc[iso_index] = pd.to_datetime(
-                values.loc[iso_index], errors="coerce", yearfirst=True
+            idx = values.index[iso_mask]
+            result.loc[idx] = pd.to_datetime(
+                values.loc[idx], errors="coerce", yearfirst=True
             )
 
-        # Vietnamese/export dates are generally dd/mm/yyyy.
-        non_iso_index = values.index[~iso_mask]
-        if len(non_iso_index):
-            result.loc[non_iso_index] = pd.to_datetime(
-                values.loc[non_iso_index], errors="coerce", dayfirst=True
+        other_idx = values.index[~iso_mask]
+        if len(other_idx):
+            # Date Created is exported as M/D/YYYY, optionally with time.
+            # month_first=True guarantees 6/5/2026 = June 5, not 6 May.
+            result.loc[other_idx] = pd.to_datetime(
+                values.loc[other_idx],
+                errors="coerce",
+                dayfirst=not month_first,
+                format="mixed",
             )
 
     return result
-
 
 def normalize_year_month(series: pd.Series) -> pd.Series:
     """Normalize an existing Year-Month column to yyyy-mm."""
@@ -321,41 +319,18 @@ def prepare(source: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     date_col = cols["date"]
     assert date_col is not None
 
-    # Parse the receipt date safely.
-    raw_receipt_date = df[date_col].copy()
-    df[date_col] = parse_date_series(raw_receipt_date)
-
-    # Correct dates that were already converted with month/day swapped before
-    # reaching this function. Date Created is used as a reliable cross-check.
-    # Example: receipt 2026-05-06 but Date Created is 2026-06-05 -> 2026-06-05.
+    # Use Date Created as the reporting date whenever available. The NetSuite
+    # export uses the US format M/D/YYYY, so parse it explicitly month-first.
     created_col = cols.get("date_created")
     if created_col and created_col in df.columns:
-        created_dates = parse_date_series(df[created_col])
-        receipt_dates = df[date_col].copy()
+        df[created_col] = parse_date_series(df[created_col], month_first=True)
+        df[date_col] = df[created_col]
+    else:
+        # Fallback only when Date Created is absent.
+        df[date_col] = parse_date_series(df[date_col], month_first=False)
 
-        valid = receipt_dates.notna() & created_dates.notna()
-        same_year = receipt_dates.dt.year.eq(created_dates.dt.year)
-        different_month = receipt_dates.dt.month.ne(created_dates.dt.month)
-        swapped_matches = (
-            receipt_dates.dt.day.eq(created_dates.dt.month)
-            & receipt_dates.dt.month.eq(created_dates.dt.day)
-        )
-        swap_mask = valid & same_year & different_month & swapped_matches
-
-        if swap_mask.any():
-            corrected = pd.to_datetime(
-                {
-                    "year": receipt_dates.loc[swap_mask].dt.year,
-                    "month": receipt_dates.loc[swap_mask].dt.day,
-                    "day": receipt_dates.loc[swap_mask].dt.month,
-                },
-                errors="coerce",
-            )
-            df.loc[swap_mask, date_col] = corrected.values
-
-    # Always derive the reporting month from the corrected receipt date.
-    # Do not trust a pre-existing Year-Month helper because it may have been
-    # calculated from a wrongly interpreted date.
+    # Rebuild the reporting month solely from the parsed reporting date.
+    # Any pre-existing Year-Month helper is intentionally ignored.
     df["Year-Month"] = df[date_col].dt.strftime("%Y-%m")
 
     # Keep rows with a valid reporting month. A valid date is still needed for
