@@ -90,14 +90,15 @@ div[data-testid="stFileUploader"] section {{border:1px dashed #9AAAC0;border-rad
 
 /* ---------- KPI cards ---------- */
 .kpi-row {{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;background:white;border:1px solid {BORDER};border-radius:12px;padding:10px 6px;box-shadow:0 2px 8px rgba(15,40,80,.06);margin-bottom:5px;}}
-.kpi {{display:flex;align-items:center;min-height:112px;padding:10px 18px;border-right:1px solid #D7DEE8;}}
+.kpi {{display:flex;align-items:center;min-height:122px;padding:12px 15px;border-right:1px solid #D7DEE8;min-width:0;}}
 .kpi:last-child {{border-right:0;}}
-.kpi-icon {{width:64px;height:64px;min-width:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{NAVY};color:white;font-size:30px;margin-right:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.13);}}
-.kpi-label {{font-size:13px;font-weight:900;color:#101828;letter-spacing:.2px;white-space:nowrap;}}
-.kpi-value {{font-size:clamp(26px,2.3vw,38px);font-weight:900;line-height:1.08;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}}
-.kpi.top-vendor .kpi-value, .kpi.top-item .kpi-value {{font-size:clamp(18px,1.55vw,25px);line-height:1.12;white-space:normal;overflow:visible;text-overflow:clip;max-width:220px;overflow-wrap:anywhere;word-break:normal;}}
-.kpi.top-vendor {{padding-left:14px;padding-right:14px;}}
-.kpi-unit {{font-size:12px;color:#17243A;font-weight:700;margin-top:3px;}}
+.kpi > div:last-child {{min-width:0;flex:1;}}
+.kpi-icon {{width:60px;height:60px;min-width:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{NAVY};color:white;font-size:28px;margin-right:13px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.13);}}
+.kpi-label {{font-size:12px;font-weight:900;color:#101828;letter-spacing:.15px;white-space:normal;line-height:1.15;margin-bottom:5px;}}
+.kpi-value {{font-size:clamp(24px,2vw,34px);font-weight:900;line-height:1.08;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}}
+.kpi.top-vendor .kpi-value, .kpi.top-item .kpi-value {{font-size:clamp(17px,1.35vw,22px);line-height:1.16;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%;overflow-wrap:break-word;word-break:normal;}}
+.kpi.top-vendor, .kpi.top-item {{padding-left:12px;padding-right:12px;}}
+.kpi-unit {{font-size:11px;color:#17243A;font-weight:700;margin-top:5px;line-height:1.2;white-space:normal;}}
 
 /* ---------- Chart cards ---------- */
 .chart-card {{background:white;border:1.2px solid {BORDER};border-radius:12px;padding:10px 12px 7px;box-shadow:0 4px 14px rgba(15,40,80,.09);}}
@@ -113,11 +114,11 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 }}
 
 /* ---------- Insight strip ---------- */
-.insights {{display:grid;grid-template-columns:1.05fr repeat(4,1fr);background:linear-gradient(90deg,#FFF8D9,#FFF0B5);border:1.5px solid #E9B92E;border-radius:12px;margin:10px 0;padding:14px 16px;box-shadow:0 3px 10px rgba(120,90,0,.10);min-height:122px;align-items:stretch;}}
+.insights {{display:grid;grid-template-columns:1.05fr repeat(4,minmax(0,1fr));background:linear-gradient(90deg,#FFF8D9,#FFF0B5);border:1.5px solid #E9B92E;border-radius:12px;margin:10px 0;padding:15px 16px;box-shadow:0 3px 10px rgba(120,90,0,.10);min-height:142px;align-items:stretch;}}
 .insight-head {{display:flex;align-items:center;font-size:20px;font-weight:900;color:#102A56;padding-right:14px;line-height:1.2;}}
 .insight-bulb {{width:54px;height:54px;min-width:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{ORANGE};color:white;font-size:28px;margin-right:12px;box-shadow:0 2px 6px rgba(120,80,0,.18);}}
 .insight-item {{border-left:1px dashed #9A8B5F;padding:10px 16px;color:#17233D;display:flex;align-items:center;justify-content:center;min-width:0;}}
-.insight-copy {{width:100%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px;font-size:15px;font-weight:700;line-height:1.28;overflow-wrap:anywhere;}}
+.insight-copy {{width:100%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:6px;font-size:14px;font-weight:700;line-height:1.32;overflow-wrap:break-word;word-break:normal;min-width:0;}}
 .insight-copy .insight-label {{font-size:13px;font-weight:900;color:#102A56;text-transform:uppercase;letter-spacing:.15px;}}
 .insight-copy b {{color:{RED};font-size:16px;font-weight:900;line-height:1.2;}}
 .insight-copy .insight-note {{font-size:14px;font-weight:700;color:#27364F;}}
@@ -137,6 +138,24 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 
 /* ---------- Data table ---------- */
 div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDER};border-radius:8px;}}
+
+
+/* ---------- Screenshot export mode ---------- */
+.export-mode .kpi-row {{padding:12px 8px;}}
+.export-mode .kpi {{min-height:140px;padding:14px 16px;align-items:center;}}
+.export-mode .kpi-icon {{width:58px;height:58px;min-width:58px;font-size:27px;margin-right:12px;}}
+.export-mode .kpi-label {{font-size:12px;line-height:1.18;margin-bottom:7px;}}
+.export-mode .kpi-value {{font-size:30px;line-height:1.12;margin-top:0;}}
+.export-mode .kpi.top-vendor .kpi-value, .export-mode .kpi.top-item .kpi-value {{font-size:20px;line-height:1.2;max-width:100%;}}
+.export-mode .kpi-unit {{font-size:11px;line-height:1.25;margin-top:7px;}}
+.export-mode .insights {{min-height:165px;padding:18px 18px;}}
+.export-mode .insight-head {{font-size:18px;line-height:1.25;}}
+.export-mode .insight-item {{padding:12px 18px;}}
+.export-mode .insight-copy {{font-size:14px;line-height:1.35;gap:7px;}}
+.export-mode .insight-copy .insight-label {{font-size:12px;line-height:1.2;}}
+.export-mode .insight-copy b {{font-size:15px;line-height:1.25;}}
+.export-mode .insight-copy .insight-note {{font-size:13px;line-height:1.3;}}
+.export-mode .chart-title {{font-size:15px;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1379,7 +1398,7 @@ st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466"> Please press "EXPORT DATA" to print interface.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Chụp nguyên giao diện dashboard hiện tại thành một ảnh PNG chất lượng cao.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -1400,7 +1419,7 @@ components.html(
       #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
     </style>
     <div class="export-wrap">
-      <button id="exportBtn" class="export-btn">⬇️ EXPORT INTERFACE </button>
+      <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
       <div id="status">Ảnh sẽ chụp từ tiêu đề IQC QUALITY DASHBOARD đến ngay phía trên khu vực Export.</div>
     </div>
     <script>
@@ -1426,7 +1445,8 @@ components.html(
         const container = start.closest('.block-container') || doc.querySelector('.block-container');
         if (!container) throw new Error('Không tìm thấy vùng nội dung Streamlit.');
 
-        await new Promise(resolve => setTimeout(resolve, 650));
+        container.classList.add('export-mode');
+        await new Promise(resolve => setTimeout(resolve, 900));
 
         const containerRect = container.getBoundingClientRect();
         const startRect = start.getBoundingClientRect();
@@ -1443,8 +1463,8 @@ components.html(
           logging: false,
           scrollX: 0,
           scrollY: -window.parent.scrollY,
-          windowWidth: doc.documentElement.scrollWidth,
-          windowHeight: doc.documentElement.scrollHeight
+          windowWidth: Math.ceil(containerRect.width),
+          windowHeight: Math.ceil(doc.documentElement.scrollHeight)
         });
 
         const cropY = Math.round(startY * scale);
@@ -1466,11 +1486,17 @@ components.html(
           a.click();
           a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 2000);
+          container.classList.remove('export-mode');
           status.textContent = 'Đã tạo ảnh. File đang được tải về máy.';
           btn.disabled = false;
           btn.textContent = '⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH';
         }, 'image/png', 1.0);
       } catch (err) {
+        try {
+          const doc = window.parent.document;
+          const container = doc.querySelector('.block-container');
+          if (container) container.classList.remove('export-mode');
+        } catch (_) {}
         status.textContent = 'Không thể tạo ảnh: ' + err.message;
         btn.disabled = false;
         btn.textContent = '⬇️ THỬ XUẤT LẠI DASHBOARD';
