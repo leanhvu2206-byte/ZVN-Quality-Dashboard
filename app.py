@@ -702,6 +702,20 @@ def _wrap_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont,
     return lines[:max_lines]
 
 
+def _safe_list(value) -> list:
+    """Convert Plotly/Pandas/NumPy sequences without boolean evaluation."""
+    if value is None:
+        return []
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, (pd.Series, pd.Index)):
+        return value.tolist()
+    try:
+        return list(value)
+    except TypeError:
+        return [value]
+
+
 def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
     """Dedicated print renderer with exact aspect ratio and large typography."""
     dpi = 160
@@ -713,8 +727,8 @@ def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
     horizontal = next((t for t in traces if getattr(t, "type", "") == "bar" and getattr(t, "orientation", None) == "h"), None)
 
     if pie is not None:
-        labels = list(pie.labels or [])
-        values = np.asarray(list(pie.values or []), dtype=float)
+        labels = [str(x) for x in _safe_list(getattr(pie, "labels", None))]
+        values = np.asarray(_safe_list(getattr(pie, "values", None)), dtype=float)
         pie_colors = getattr(getattr(pie, "marker", None), "colors", None)
         colors_list = list(pie_colors) if pie_colors is not None else [GREEN, RED, ORANGE, PURPLE, BLUE]
         wedges, _ = ax.pie(
@@ -729,8 +743,9 @@ def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
                 x, y = 0.80 * np.cos(np.deg2rad(angle)), 0.80 * np.sin(np.deg2rad(angle))
                 ax.text(x, y, f"{share:.1%}", ha="center", va="center", color="white", fontsize=22, fontweight="bold")
         center = f"{total:,.0f}\nTotal"
-        if getattr(fig.layout, "annotations", None):
-            center = _strip_html(fig.layout.annotations[0].text).replace("Total Defect", "\nTotal Defect")
+        annotations = _safe_list(getattr(fig.layout, "annotations", None))
+        if len(annotations) > 0:
+            center = _strip_html(annotations[0].text).replace("Total Defect", "\nTotal Defect")
         ax.text(0, 0, center, ha="center", va="center", fontsize=28, fontweight="bold", color=TEXT)
         ax.legend(wedges, labels, loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False,
                   fontsize=19, handlelength=1.2, labelspacing=1.0)
@@ -751,7 +766,8 @@ def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
         ax.set_axisbelow(True)
         ax.set_xlabel("PCS", fontsize=21, fontweight="bold", color=TEXT, labelpad=10)
         max_value = float(values.max()) if len(values) else 1.0
-        txt = list(getattr(horizontal, "text", None) or [f"{v:,.0f}" for v in values])
+        txt_source = _safe_list(getattr(horizontal, "text", None))
+        txt = txt_source if len(txt_source) > 0 else [f"{v:,.0f}" for v in values]
         for y, value, label_text in zip(positions, values, txt):
             ax.text(value + max_value * 0.025, y, str(label_text), va="center", ha="left",
                     fontsize=20, fontweight="bold", color=TEXT)
@@ -1379,34 +1395,55 @@ st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Tải toàn bộ dashboard đã lọc thành PDF 2 trang để gửi hoặc trình bày.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Tạo và tải toàn bộ dashboard đã lọc thành PDF 2 trang.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
-try:
-    report_period = month if week == "(All)" else f"{month}_{week}"
-    dashboard_pages = build_dashboard_pages(
-        report_month=report_period,
-        source=source_name or "Uploaded file",
-        metrics=full_metrics,
-        insights=full_insights,
-        figures=full_figures,
-        footer_metrics=full_footer,
-    )
-    export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, "PDF")
+
+report_period = month if week == "(All)" else f"{month}_{week}"
+report_state_key = f"{source_name}|{month}|{week}|{vendor}|{item}|{len(filtered)}|{received}|{rejected}"
+
+if st.button(
+    "📄 TẠO FILE PDF TOÀN BỘ DASHBOARD",
+    use_container_width=True,
+    type="primary",
+    key="create_full_dashboard_pdf",
+):
+    try:
+        with st.spinner("Đang tạo báo cáo PDF 2 trang..."):
+            dashboard_pages = build_dashboard_pages(
+                report_month=report_period,
+                source=source_name or "Uploaded file",
+                metrics=full_metrics,
+                insights=full_insights,
+                figures=full_figures,
+                footer_metrics=full_footer,
+            )
+            export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, "PDF")
+        st.session_state["full_report_pdf_bytes"] = export_bytes
+        st.session_state["full_report_pdf_key"] = report_state_key
+        st.success("Đã tạo PDF thành công. Bấm nút bên dưới để tải về máy.")
+    except Exception as export_error:
+        st.session_state.pop("full_report_pdf_bytes", None)
+        st.session_state.pop("full_report_pdf_key", None)
+        st.error(f"Không thể tạo file PDF: {export_error}")
+
+if (
+    st.session_state.get("full_report_pdf_bytes") is not None
+    and st.session_state.get("full_report_pdf_key") == report_state_key
+):
     st.download_button(
-        "⬇️ EXPORT FULL DASHBOARD TO PDF",
-        data=export_bytes,
+        "⬇️ TẢI FILE PDF VỀ MÁY",
+        data=st.session_state["full_report_pdf_bytes"],
         file_name=f"IQC_Quality_Report_{report_period}.pdf",
-        mime=export_mime,
+        mime="application/pdf",
         use_container_width=True,
         type="primary",
         key="download_full_dashboard_pdf",
     )
-    st.caption("File PDF gồm 2 trang A4 ngang và sử dụng đúng dữ liệu theo Month, Week, Vendor và Item đang được chọn.")
-except Exception as export_error:
-    st.error(f"Không thể tạo file PDF: {export_error}")
-    st.caption("Hãy kiểm tra dữ liệu lọc rồi tải lại trang. Chức năng này không cần Chrome hoặc Kaleido.")
+    st.caption("PDF gồm 2 trang A4 ngang và sử dụng đúng dữ liệu theo bộ lọc hiện tại.")
+else:
+    st.caption("Bấm “TẠO FILE PDF TOÀN BỘ DASHBOARD” để chuẩn bị file tải xuống.")
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
