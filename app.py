@@ -175,6 +175,116 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 st.markdown(
     """
 <style>
+/* ===== V25 EXPORT TEXT OVERLAP FIX ===== */
+body.export-mode .upload-panel,
+body.export-mode [data-testid="stFileUploader"],
+body.export-mode details[data-testid="stExpander"] {
+    display: none !important;
+}
+
+body.export-mode .dashboard-root {
+    width: 1360px !important;
+    max-width: 1360px !important;
+    min-width: 1360px !important;
+    margin: 0 auto !important;
+}
+
+body.export-mode .dashboard-title,
+body.export-mode .main-title,
+body.export-mode .title-text {
+    font-size: 34px !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+body.export-mode .dashboard-subtitle,
+body.export-mode .subtitle-text {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    margin-top: 6px !important;
+}
+
+body.export-mode .kpi-card {
+    min-height: 118px !important;
+    height: 118px !important;
+    padding: 16px 14px !important;
+    align-items: center !important;
+}
+
+body.export-mode .kpi-label {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 7px !important;
+    white-space: normal !important;
+}
+
+body.export-mode .kpi-value {
+    font-size: 25px !important;
+    line-height: 1.08 !important;
+    margin-bottom: 7px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+body.export-mode .kpi-card.vendor-card .kpi-value,
+body.export-mode .kpi-card.item-card .kpi-value,
+body.export-mode .vendor-text,
+body.export-mode .item-text {
+    font-size: 20px !important;
+    line-height: 1.08 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    max-width: 190px !important;
+}
+
+body.export-mode .kpi-subtext {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+}
+
+body.export-mode .insights-strip,
+body.export-mode .insight-wrapper {
+    min-height: 104px !important;
+    height: 104px !important;
+}
+
+body.export-mode .insight-box,
+body.export-mode .insight-item {
+    min-height: 104px !important;
+    padding: 14px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+body.export-mode .insight-title {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 7px !important;
+}
+
+body.export-mode .insight-value {
+    font-size: 17px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+body.export-mode .insight-sub,
+body.export-mode .insight-detail {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+}
+
+</style>
 """,
     unsafe_allow_html=True,
 )
@@ -1402,93 +1512,17 @@ footer_html += '</div>'
 st.markdown(footer_html, unsafe_allow_html=True)
 
 # ============================================================
-# ONE-BUTTON BROWSER PRINT / SAVE AS PDF
+# ONE-BUTTON FULL DASHBOARD SCREENSHOT EXPORT
 # ============================================================
-# Use the browser's native print engine instead of html2canvas.
-# This preserves the exact fonts, spacing, Plotly charts and card layout
-# currently visible on screen.
+# Capture the actual browser-rendered dashboard so the exported image keeps
+# exactly the same fonts, colors, spacing and chart layout as the web page.
 st.markdown('<div id="dashboard-capture-end"></div>', unsafe_allow_html=True)
 
-# Print-only styles. Keep this as a normal string (not an f-string) so CSS
-# braces are interpreted safely by Python.
 st.markdown(
-    """
-    <style>
-    @media print {
-        @page {
-            size: A3 landscape;
-            margin: 8mm;
-        }
-
-        html, body {
-            background: #F2F5FA !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        /* Hide Streamlit chrome and non-report controls. */
-        header[data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        [data-testid="stStatusWidget"],
-        [data-testid="stSidebar"],
-        details[data-testid="stExpander"],
-        [data-testid="stFileUploader"],
-        .upload-panel,
-        .print-hide,
-        .source-note {
-            display: none !important;
-        }
-
-        /* Use the full printable width without changing component geometry. */
-        .stApp,
-        .main,
-        .block-container {
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-        }
-
-        .dashboard-root {
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            transform: none !important;
-            zoom: 1 !important;
-        }
-
-        /* Prevent cards and charts from being split between pages. */
-        .kpi-card,
-        .chart-card,
-        .insights-strip,
-        .summary-strip,
-        [data-testid="stPlotlyChart"] {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-        }
-
-        /* Plotly should print at the same size and with full opacity. */
-        [data-testid="stPlotlyChart"],
-        [data-testid="stPlotlyChart"] > div,
-        .js-plotly-plot,
-        .plot-container,
-        .svg-container {
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="print-export-card" style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;'
-    'border-radius:12px;background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
-    '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">🖨️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Mở cửa sổ in của trình duyệt và chọn Save as PDF. Bản in giữ nguyên giao diện dashboard đang hiển thị.</div>'
+    '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
+    'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
+    '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Chụp nguyên giao diện dashboard hiện tại thành một ảnh PNG chất lượng cao.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -1499,55 +1533,200 @@ components.html(
       html, body { margin:0; padding:0; background:transparent; font-family:Arial,Helvetica,sans-serif; }
       .export-wrap { padding:8px 0 2px; }
       .export-btn {
-        width:100%; height:48px; border:0; border-radius:8px;
+        width:100%; height:50px; border:0; border-radius:9px;
         background:#073B7A; color:#fff; font-size:16px; font-weight:900;
         cursor:pointer; box-shadow:0 3px 10px rgba(7,59,122,.22);
       }
       .export-btn:hover { background:#0A56B5; }
+      .export-btn:disabled { opacity:.65; cursor:wait; }
       #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
     </style>
     <div class="export-wrap">
-      <button id="printBtn" class="export-btn">🖨️ IN / LƯU TOÀN BỘ DASHBOARD DẠNG PDF</button>
-      <div id="status">Trong cửa sổ hiện ra, chọn Destination → Save as PDF và bật Background graphics.</div>
+      <button id="exportBtn" class="export-btn">📸 CHỤP TOÀN BỘ DASHBOARD VÀ LƯU PNG</button>
+      <div id="status">Chọn tab dashboard hiện tại khi trình duyệt hỏi quyền. Hệ thống sẽ tự cuộn và ghép ảnh.</div>
     </div>
     <script>
-    const btn = document.getElementById('printBtn');
+    const btn = document.getElementById('exportBtn');
     const status = document.getElementById('status');
+    const parentWin = window.parent;
+    const parentDoc = parentWin.document;
+
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const nextPaint = () => new Promise(resolve => parentWin.requestAnimationFrame(() => parentWin.requestAnimationFrame(resolve)));
+
+    function safeName() {
+      const now = new Date();
+      const p = n => String(n).padStart(2,'0');
+      return `IQC_Quality_Dashboard_${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}.png`;
+    }
+
+    async function waitForVideoFrame(video) {
+      if (video.readyState >= 2 && video.videoWidth > 0) return;
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Không nhận được hình ảnh từ tab đã chọn.')), 10000);
+        video.onloadedmetadata = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
+    }
+
+    async function captureDashboardPixels() {
+      const startMarker = parentDoc.getElementById('dashboard-capture-start');
+      const endMarker = parentDoc.getElementById('dashboard-capture-end');
+      if (!startMarker || !endMarker) throw new Error('Không tìm thấy vùng dashboard cần chụp.');
+
+      const block = startMarker.closest('.block-container') || parentDoc.querySelector('.block-container');
+      if (!block) throw new Error('Không tìm thấy vùng nội dung dashboard.');
+
+      // Save the user's current position and temporarily collapse the upload panel.
+      const originalScrollY = parentWin.scrollY;
+      const uploadPanel = parentDoc.querySelector('[data-testid="stVerticalBlockBorderWrapper"] details');
+      const uploadWasOpen = uploadPanel ? uploadPanel.open : false;
+      if (uploadPanel && uploadPanel.open) {
+        uploadPanel.open = false;
+        await nextPaint();
+        await sleep(250);
+      }
+
+      // Browser permission is required once. Select the current Streamlit tab.
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            displaySurface: 'browser',
+            frameRate: { ideal: 10, max: 15 }
+          },
+          audio: false,
+          preferCurrentTab: true,
+          selfBrowserSurface: 'include',
+          surfaceSwitching: 'exclude'
+        });
+
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        await video.play();
+        await waitForVideoFrame(video);
+        await sleep(600);
+
+        // Absolute document coordinates after layout is stable.
+        const startAbs = startMarker.getBoundingClientRect().top + parentWin.scrollY;
+        const endAbs = endMarker.getBoundingClientRect().top + parentWin.scrollY;
+        if (endAbs <= startAbs) throw new Error('Vùng chụp không hợp lệ.');
+
+        const blockRect = block.getBoundingClientRect();
+        const viewportW = parentWin.innerWidth;
+        const viewportH = parentWin.innerHeight;
+        const scaleX = video.videoWidth / viewportW;
+        const scaleY = video.videoHeight / viewportH;
+
+        // Crop horizontally to the actual Streamlit dashboard content.
+        const cropLeftCss = Math.max(0, blockRect.left);
+        const cropWidthCss = Math.min(blockRect.width, viewportW - cropLeftCss);
+        const outWidth = Math.max(1, Math.round(cropWidthCss * scaleX));
+        const outHeight = Math.max(1, Math.round((endAbs - startAbs) * scaleY));
+
+        const output = document.createElement('canvas');
+        output.width = outWidth;
+        output.height = outHeight;
+        const outCtx = output.getContext('2d');
+        outCtx.fillStyle = '#F2F5FA';
+        outCtx.fillRect(0, 0, outWidth, outHeight);
+
+        const frame = document.createElement('canvas');
+        frame.width = video.videoWidth;
+        frame.height = video.videoHeight;
+        const frameCtx = frame.getContext('2d');
+
+        const maxScroll = Math.max(0, parentDoc.documentElement.scrollHeight - viewportH);
+        const overlap = Math.min(120, Math.round(viewportH * 0.12));
+        const step = Math.max(200, viewportH - overlap);
+        const scrollPositions = [];
+        let y = Math.min(startAbs, maxScroll);
+        while (y < endAbs) {
+          scrollPositions.push(Math.min(y, maxScroll));
+          if (y >= maxScroll) break;
+          y += step;
+        }
+        const lastNeeded = Math.min(Math.max(startAbs, endAbs - viewportH), maxScroll);
+        if (!scrollPositions.length || Math.abs(scrollPositions[scrollPositions.length - 1] - lastNeeded) > 4) {
+          scrollPositions.push(lastNeeded);
+        }
+
+        let coveredUntil = startAbs;
+        for (let i = 0; i < scrollPositions.length; i++) {
+          const scrollY = scrollPositions[i];
+          status.textContent = `Đang chụp phần ${i + 1}/${scrollPositions.length}...`;
+          parentWin.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
+          await nextPaint();
+          await sleep(420);
+
+          frameCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+          const visibleStart = Math.max(startAbs, scrollY, coveredUntil);
+          const visibleEnd = Math.min(endAbs, scrollY + viewportH);
+          if (visibleEnd <= visibleStart) continue;
+
+          const srcX = Math.round(cropLeftCss * scaleX);
+          const srcY = Math.round((visibleStart - scrollY) * scaleY);
+          const srcW = outWidth;
+          const srcH = Math.round((visibleEnd - visibleStart) * scaleY);
+          const destY = Math.round((visibleStart - startAbs) * scaleY);
+
+          outCtx.drawImage(frame, srcX, srcY, srcW, srcH, 0, destY, srcW, srcH);
+          coveredUntil = visibleEnd;
+          if (coveredUntil >= endAbs - 1) break;
+        }
+
+        await new Promise((resolve, reject) => {
+          output.toBlob(blob => {
+            if (!blob) {
+              reject(new Error('Không tạo được file PNG.'));
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = parentDoc.createElement('a');
+            a.href = url;
+            a.download = safeName();
+            parentDoc.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 3000);
+            resolve();
+          }, 'image/png', 1.0);
+        });
+      } finally {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        parentWin.scrollTo({ top: originalScrollY, left: 0, behavior: 'instant' });
+        if (uploadPanel && uploadWasOpen) uploadPanel.open = true;
+        await nextPaint();
+      }
+    }
 
     btn.addEventListener('click', async () => {
-      const doc = window.parent.document;
-      const win = window.parent;
-
-      // Hide this component and the export card only while printing.
-      const frame = window.frameElement;
-      const frameBlock = frame ? frame.closest('[data-testid="stCustomComponentV1"]') : null;
-      const exportCard = Array.from(doc.querySelectorAll('.print-export-card')).pop();
-      if (frameBlock) frameBlock.classList.add('print-hide');
-      if (exportCard) exportCard.classList.add('print-hide');
-
-      status.textContent = 'Đang mở cửa sổ in...';
-
-      // Wait for web fonts and Plotly rendering to settle.
+      btn.disabled = true;
+      btn.textContent = '⏳ ĐANG CHỤP VÀ GHÉP ẢNH...';
+      status.textContent = 'Khi trình duyệt hỏi, chọn đúng tab dashboard hiện tại rồi bấm Share.';
       try {
-        if (doc.fonts && doc.fonts.ready) await doc.fonts.ready;
-      } catch (_) {}
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const cleanup = () => {
-        if (frameBlock) frameBlock.classList.remove('print-hide');
-        if (exportCard) exportCard.classList.remove('print-hide');
-        status.textContent = 'Trong cửa sổ hiện ra, chọn Destination → Save as PDF và bật Background graphics.';
-        win.removeEventListener('afterprint', cleanup);
-      };
-      win.addEventListener('afterprint', cleanup);
-      win.print();
-
-      // Fallback cleanup for browsers that do not fire afterprint reliably.
-      setTimeout(cleanup, 3000);
+        await captureDashboardPixels();
+        status.textContent = 'Đã chụp xong. Ảnh PNG đang được tải về máy.';
+        btn.textContent = '📸 CHỤP LẠI TOÀN BỘ DASHBOARD';
+      } catch (err) {
+        if (err && err.name === 'NotAllowedError') {
+          status.textContent = 'Bạn đã hủy hoặc chưa cấp quyền chụp tab.';
+        } else {
+          status.textContent = 'Không thể chụp ảnh: ' + (err?.message || err);
+        }
+        btn.textContent = '📸 THỬ CHỤP LẠI DASHBOARD';
+      } finally {
+        btn.disabled = false;
+      }
     });
     </script>
     """,
-    height=88,
+    height=92,
     scrolling=False,
 )
 
