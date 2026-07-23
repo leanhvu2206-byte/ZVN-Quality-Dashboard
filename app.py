@@ -1375,33 +1375,38 @@ full_footer = [
     ("Supplier PPM", number(round(supplier_ppm)), "#FFD33D"),
 ]
 
-st.markdown('<div style="margin-top:12px;font-size:18px;font-weight:900;color:#062B63">⬇️ EXPORT PROFESSIONAL REPORT</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
+    'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
+    '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Tải toàn bộ dashboard đã lọc thành PDF 2 trang để gửi hoặc trình bày.</div>'
+    '</div>',
+    unsafe_allow_html=True,
+)
 try:
+    report_period = month if week == "(All)" else f"{month}_{week}"
     dashboard_pages = build_dashboard_pages(
-        report_month=month,
+        report_month=report_period,
         source=source_name or "Uploaded file",
         metrics=full_metrics,
         insights=full_insights,
         figures=full_figures,
         footer_metrics=full_footer,
     )
-    export_format_col, export_button_col = st.columns([1, 2], gap="small")
-    with export_format_col:
-        export_format = st.selectbox("Export format", ["PDF", "PNG"], label_visibility="collapsed")
-    export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, export_format)
-    with export_button_col:
-        st.download_button(
-            "⬇️ EXPORT PROFESSIONAL REPORT",
-            data=export_bytes,
-            file_name=f"IQC_Professional_Report_{month}.{extension}",
-            mime=export_mime,
-            use_container_width=True,
-            type="primary",
-        )
-    st.caption("PDF gồm 2 trang A4 ngang được thiết kế riêng cho bản in. PNG được tải dưới dạng ZIP chứa 2 ảnh chất lượng cao.")
+    export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, "PDF")
+    st.download_button(
+        "⬇️ EXPORT FULL DASHBOARD TO PDF",
+        data=export_bytes,
+        file_name=f"IQC_Quality_Report_{report_period}.pdf",
+        mime=export_mime,
+        use_container_width=True,
+        type="primary",
+        key="download_full_dashboard_pdf",
+    )
+    st.caption("File PDF gồm 2 trang A4 ngang và sử dụng đúng dữ liệu theo Month, Week, Vendor và Item đang được chọn.")
 except Exception as export_error:
-    st.error(f"Không thể tạo file dashboard: {export_error}")
-    st.caption("Vui lòng kiểm tra lại dữ liệu hoặc tải lại trang. Bản Print Pro xuất PDF 2 trang hoặc ZIP gồm 2 ảnh PNG, không cần Chrome/Kaleido.")
+    st.error(f"Không thể tạo file PDF: {export_error}")
+    st.caption("Hãy kiểm tra dữ liệu lọc rồi tải lại trang. Chức năng này không cần Chrome hoặc Kaleido.")
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
