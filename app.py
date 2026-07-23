@@ -164,131 +164,10 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
   .insight-item {{border-top:1px dashed #8D98A7;}}
   .summary-strip {{grid-template-columns:repeat(2,1fr);}}
 }}
-
-
 </style>
 """,
     unsafe_allow_html=True,
 )
-
-# Export-only CSS is deliberately kept in a non-f-string to avoid brace parsing errors.
-st.markdown(
-    """
-<style>
-/* ===== V25 EXPORT TEXT OVERLAP FIX ===== */
-body.export-mode .upload-panel,
-body.export-mode [data-testid="stFileUploader"],
-body.export-mode details[data-testid="stExpander"] {
-    display: none !important;
-}
-
-body.export-mode .dashboard-root {
-    width: 1360px !important;
-    max-width: 1360px !important;
-    min-width: 1360px !important;
-    margin: 0 auto !important;
-}
-
-body.export-mode .dashboard-title,
-body.export-mode .main-title,
-body.export-mode .title-text {
-    font-size: 34px !important;
-    line-height: 1.05 !important;
-    letter-spacing: -0.3px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-body.export-mode .dashboard-subtitle,
-body.export-mode .subtitle-text {
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    margin-top: 6px !important;
-}
-
-body.export-mode .kpi-card {
-    min-height: 118px !important;
-    height: 118px !important;
-    padding: 16px 14px !important;
-    align-items: center !important;
-}
-
-body.export-mode .kpi-label {
-    font-size: 12px !important;
-    line-height: 1.1 !important;
-    margin-bottom: 7px !important;
-    white-space: normal !important;
-}
-
-body.export-mode .kpi-value {
-    font-size: 25px !important;
-    line-height: 1.08 !important;
-    margin-bottom: 7px !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-}
-
-body.export-mode .kpi-card.vendor-card .kpi-value,
-body.export-mode .kpi-card.item-card .kpi-value,
-body.export-mode .vendor-text,
-body.export-mode .item-text {
-    font-size: 20px !important;
-    line-height: 1.08 !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-    max-width: 190px !important;
-}
-
-body.export-mode .kpi-subtext {
-    font-size: 11px !important;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-}
-
-body.export-mode .insights-strip,
-body.export-mode .insight-wrapper {
-    min-height: 104px !important;
-    height: 104px !important;
-}
-
-body.export-mode .insight-box,
-body.export-mode .insight-item {
-    min-height: 104px !important;
-    padding: 14px 16px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-}
-
-body.export-mode .insight-title {
-    font-size: 12px !important;
-    line-height: 1.1 !important;
-    margin-bottom: 7px !important;
-}
-
-body.export-mode .insight-value {
-    font-size: 17px !important;
-    line-height: 1.15 !important;
-    white-space: normal !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-}
-
-body.export-mode .insight-sub,
-body.export-mode .insight-detail {
-    font-size: 11px !important;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-}
-
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
 
 # ============================================================
 # DATA LOADING
@@ -1103,7 +982,6 @@ with st.container(key="topbar"):
     item_placeholder = item_col.empty()
 
 with st.container(key="upload_panel"):
-    st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
     with st.expander("📤 Upload / change data file", expanded=False):
         uploaded = st.file_uploader(
             "Upload IQC file",
@@ -1111,7 +989,6 @@ with st.container(key="upload_panel"):
             label_visibility="collapsed",
         )
         st.caption("Đặt file mặc định tại `data/IQC_Data.xlsx` để mọi người xem chung một dữ liệu.")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 try:
     if uploaded is not None:
@@ -1271,7 +1148,6 @@ for icon, label, value, unit, color in kpis:
         '</div></div>'
     )
 kpi_html += '</div>'
-st.markdown('</div>', unsafe_allow_html=True)
 st.markdown(kpi_html, unsafe_allow_html=True)
 
 # ============================================================
@@ -1529,12 +1405,12 @@ st.markdown(
 
 components.html(
     """
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
       html, body { margin:0; padding:0; background:transparent; font-family:Arial,Helvetica,sans-serif; }
       .export-wrap { padding:8px 0 2px; }
       .export-btn {
-        width:100%; height:50px; border:0; border-radius:9px;
+        width:100%; height:48px; border:0; border-radius:8px;
         background:#073B7A; color:#fff; font-size:16px; font-weight:900;
         cursor:pointer; box-shadow:0 3px 10px rgba(7,59,122,.22);
       }
@@ -1543,16 +1419,12 @@ components.html(
       #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
     </style>
     <div class="export-wrap">
-      <button id="exportBtn" class="export-btn">📸 TẢI TOÀN BỘ DASHBOARD DẠNG PNG</button>
-      <div id="status">Hệ thống sẽ tạo một bản sao cố định của dashboard rồi xuất ảnh, không cuộn và không làm thay đổi giao diện đang xem.</div>
+      <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
+      <div id="status">Ảnh sẽ chụp từ tiêu đề IQC QUALITY DASHBOARD đến ngay phía trên khu vực Export.</div>
     </div>
     <script>
     const btn = document.getElementById('exportBtn');
     const status = document.getElementById('status');
-    const parentWin = window.parent;
-    const parentDoc = parentWin.document;
-
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     function safeName() {
       const now = new Date();
@@ -1560,156 +1432,79 @@ components.html(
       return `IQC_Quality_Dashboard_${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}.png`;
     }
 
-    function directChildOf(container, node) {
-      let current = node;
-      while (current && current.parentElement !== container) current = current.parentElement;
-      return current;
-    }
-
-    function removeElementBlock(element) {
-      if (!element) return;
-      const block = element.closest('[data-testid="stElementContainer"]') ||
-                    element.closest('[data-testid="stVerticalBlockBorderWrapper"]') ||
-                    element;
-      block.remove();
-    }
-
-    async function waitForAssets(root) {
-      try { await parentDoc.fonts.ready; } catch (_) {}
-      const images = Array.from(root.querySelectorAll('img'));
-      await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
-        img.addEventListener('load', resolve, {once:true});
-        img.addEventListener('error', resolve, {once:true});
-      })));
-      await sleep(500);
-    }
-
-    async function exportDashboard() {
-      if (!window.htmlToImage) throw new Error('Thư viện xuất ảnh chưa tải xong. Hãy thử lại sau vài giây.');
-
-      const startMarker = parentDoc.getElementById('dashboard-capture-start');
-      const endMarker = parentDoc.getElementById('dashboard-capture-end');
-      if (!startMarker || !endMarker) throw new Error('Không tìm thấy vùng dashboard cần xuất.');
-
-      const source = startMarker.closest('.block-container') || parentDoc.querySelector('.block-container');
-      if (!source) throw new Error('Không tìm thấy vùng nội dung dashboard.');
-
-      // Clone the already-rendered DOM. The original page is never resized or restyled.
-      const clone = source.cloneNode(true);
-      const cloneStart = clone.querySelector('#dashboard-capture-start');
-      const cloneEnd = clone.querySelector('#dashboard-capture-end');
-      if (!cloneStart || !cloneEnd) throw new Error('Không thể xác định giới hạn ảnh trong bản sao dashboard.');
-
-      const startChild = directChildOf(clone, cloneStart);
-      const endChild = directChildOf(clone, cloneEnd);
-      if (!startChild || !endChild) throw new Error('Cấu trúc dashboard không hợp lệ.');
-
-      // Keep only the blocks from the dashboard title through the footer summary.
-      const children = Array.from(clone.children);
-      const startIndex = children.indexOf(startChild);
-      const endIndex = children.indexOf(endChild);
-      children.forEach((child, index) => {
-        if (index < startIndex || index >= endIndex) child.remove();
-      });
-
-      // The upload panel is useful on the web but should not appear in a management report.
-      clone.querySelectorAll('[data-testid="stFileUploader"], .st-key-upload_panel').forEach(removeElementBlock);
-      clone.querySelectorAll('details').forEach(details => {
-        if (details.querySelector('[data-testid="stFileUploader"]')) removeElementBlock(details);
-      });
-
-      // Remove Streamlit controls and chart toolbars from the exported copy only.
-      clone.querySelectorAll('[data-testid="stToolbar"], [data-testid="stStatusWidget"], .modebar, button[title*="View fullscreen"]').forEach(el => el.remove());
-      clone.querySelectorAll('#dashboard-capture-start, #dashboard-capture-end').forEach(el => el.remove());
-
-      // Use a fixed professional canvas width so responsive cards never collapse.
-      const exportWidth = 1600;
-      Object.assign(clone.style, {
-        position: 'fixed',
-        left: '-100000px',
-        top: '0',
-        width: `${exportWidth}px`,
-        minWidth: `${exportWidth}px`,
-        maxWidth: `${exportWidth}px`,
-        margin: '0',
-        padding: '10px 18px 18px',
-        background: '#F2F5FA',
-        zIndex: '-9999',
-        overflow: 'visible'
-      });
-      clone.classList.add('iqc-export-clone');
-
-      // Small export-only safeguards. These rules affect the clone, not the live dashboard.
-      const style = parentDoc.createElement('style');
-      style.textContent = `
-        .iqc-export-clone .st-key-topbar { min-height: 96px !important; }
-        .iqc-export-clone .dash-title { font-size: 38px !important; line-height: 1.08 !important; white-space: nowrap !important; }
-        .iqc-export-clone .dash-subtitle { font-size: 12px !important; }
-        .iqc-export-clone .kpi { min-height: 126px !important; }
-        .iqc-export-clone .kpi-value { overflow: visible !important; text-overflow: clip !important; }
-        .iqc-export-clone .kpi.top-vendor .kpi-value,
-        .iqc-export-clone .kpi.top-item .kpi-value { font-size: 20px !important; line-height: 1.18 !important; white-space: normal !important; overflow-wrap: normal !important; word-break: normal !important; }
-        .iqc-export-clone .insights { min-height: 150px !important; }
-        .iqc-export-clone .insight-copy { font-size: 14px !important; line-height: 1.35 !important; }
-        .iqc-export-clone div[data-testid="stPlotlyChart"] { width: 100% !important; }
-      `;
-      parentDoc.head.appendChild(style);
-      parentDoc.body.appendChild(clone);
-
-      try {
-        await waitForAssets(clone);
-        const exportHeight = Math.ceil(clone.scrollHeight);
-        status.textContent = 'Đang tạo ảnh PNG chất lượng cao...';
-
-        const dataUrl = await window.htmlToImage.toPng(clone, {
-          cacheBust: true,
-          pixelRatio: 2,
-          backgroundColor: '#F2F5FA',
-          width: exportWidth,
-          height: exportHeight,
-          canvasWidth: exportWidth * 2,
-          canvasHeight: exportHeight * 2,
-          style: {
-            transform: 'none',
-            transformOrigin: 'top left'
-          },
-          filter: node => {
-            if (!(node instanceof parentWin.HTMLElement)) return true;
-            return !node.matches('[data-testid="stToolbar"], .modebar');
-          }
-        });
-
-        const a = parentDoc.createElement('a');
-        a.href = dataUrl;
-        a.download = safeName();
-        parentDoc.body.appendChild(a);
-        a.click();
-        a.remove();
-      } finally {
-        clone.remove();
-        style.remove();
-      }
-    }
-
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      btn.textContent = '⏳ ĐANG TẠO ẢNH...';
-      status.textContent = 'Giữ nguyên trang trong vài giây. Giao diện đang xem sẽ không bị thay đổi.';
+      btn.textContent = '⏳ ĐANG CHỤP DASHBOARD...';
+      status.textContent = 'Vui lòng chờ vài giây, hệ thống đang tạo ảnh chất lượng cao.';
       try {
-        await exportDashboard();
-        status.textContent = 'Đã tạo xong ảnh PNG và tải về máy.';
-        btn.textContent = '📸 TẢI LẠI TOÀN BỘ DASHBOARD DẠNG PNG';
+        const doc = window.parent.document;
+        const start = doc.getElementById('dashboard-capture-start');
+        const end = doc.getElementById('dashboard-capture-end');
+        if (!start || !end) throw new Error('Không tìm thấy vùng dashboard cần chụp.');
+
+        const container = start.closest('.block-container') || doc.querySelector('.block-container');
+        if (!container) throw new Error('Không tìm thấy vùng nội dung Streamlit.');
+
+        container.classList.add('export-mode');
+        await new Promise(resolve => setTimeout(resolve, 900));
+
+        const containerRect = container.getBoundingClientRect();
+        const startRect = start.getBoundingClientRect();
+        const endRect = end.getBoundingClientRect();
+        const startY = Math.max(0, startRect.top - containerRect.top);
+        const endY = Math.max(startY + 100, endRect.top - containerRect.top);
+
+        const scale = 2;
+        const fullCanvas = await html2canvas(container, {
+          scale: scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#F2F5FA',
+          logging: false,
+          scrollX: 0,
+          scrollY: -window.parent.scrollY,
+          windowWidth: Math.ceil(containerRect.width),
+          windowHeight: Math.ceil(doc.documentElement.scrollHeight)
+        });
+
+        const cropY = Math.round(startY * scale);
+        const cropH = Math.round((endY - startY) * scale);
+        const output = document.createElement('canvas');
+        output.width = fullCanvas.width;
+        output.height = cropH;
+        const ctx = output.getContext('2d');
+        ctx.fillStyle = '#F2F5FA';
+        ctx.fillRect(0, 0, output.width, output.height);
+        ctx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
+
+        output.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = doc.createElement('a');
+          a.href = url;
+          a.download = safeName();
+          doc.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          container.classList.remove('export-mode');
+          status.textContent = 'Đã tạo ảnh. File đang được tải về máy.';
+          btn.disabled = false;
+          btn.textContent = '⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH';
+        }, 'image/png', 1.0);
       } catch (err) {
-        console.error(err);
-        status.textContent = 'Không thể tạo ảnh: ' + (err?.message || err);
-        btn.textContent = '📸 THỬ TẠO LẠI ẢNH DASHBOARD';
-      } finally {
+        try {
+          const doc = window.parent.document;
+          const container = doc.querySelector('.block-container');
+          if (container) container.classList.remove('export-mode');
+        } catch (_) {}
+        status.textContent = 'Không thể tạo ảnh: ' + err.message;
         btn.disabled = false;
+        btn.textContent = '⬇️ THỬ XUẤT LẠI DASHBOARD';
       }
     });
     </script>
     """,
-    height=92,
+    height=88,
     scrolling=False,
 )
 
