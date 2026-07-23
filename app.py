@@ -1379,7 +1379,7 @@ st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Chụp nguyên giao diện dashboard hiện tại thành một ảnh PNG chất lượng cao.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466"> Please press "EXPORT DATA" to print interface.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
