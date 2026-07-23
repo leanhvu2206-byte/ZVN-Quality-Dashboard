@@ -850,16 +850,16 @@ def build_dashboard_pages(
 
     def add_header(draw: ImageDraw.ImageDraw, title: str, subtitle: str, page_no: str) -> None:
         draw.rounded_rectangle((M, 55, W-M, 250), radius=34, fill=NAVY_DARK)
-        draw.text((M+55, 98), title, font=_dashboard_font(58, True), fill="white")
-        draw.text((W-M-55, 120), subtitle, font=_dashboard_font(28, True), fill="#D7E7FF", anchor="ra")
-        draw.text((W-M-55, 185), page_no, font=_dashboard_font(23, True), fill="#AFC8EF", anchor="ra")
+        draw.text((M+55, 82), title, font=_dashboard_font(82, True), fill="white")
+        draw.text((W-M-55, 105), subtitle, font=_dashboard_font(44, True), fill="#D7E7FF", anchor="ra")
+        draw.text((W-M-55, 175), page_no, font=_dashboard_font(38, True), fill="#AFC8EF", anchor="ra")
 
     # PAGE 1 — Executive summary
     p1, d1 = page()
     add_header(d1, "IQC QUALITY DASHBOARD", f"Reporting month: {report_month}  |  Source: {source}", "PAGE 1 / 2")
 
     # KPI cards
-    kpi_top, kpi_bottom = 290, 645
+    kpi_top, kpi_bottom = 285, 690
     gap = 26
     card_w = (W - 2*M - gap*4) // 5
     fill_map = ["#EAF3FF", "#EAF8EE", "#FDECEC", "#FFF3E0", "#F3ECFF"]
@@ -867,31 +867,31 @@ def build_dashboard_pages(
     for i, (label, value, accent) in enumerate(metrics[:5]):
         x1 = M + i*(card_w+gap); x2 = x1+card_w
         _rounded_card(d1, (x1, kpi_top, x2, kpi_bottom), radius=28, fill="white")
-        d1.ellipse((x1+28, kpi_top+98, x1+142, kpi_top+212), fill=fill_map[i])
-        d1.text((x1+85, kpi_top+155), icon_chars[i], font=_dashboard_font(40, True), fill=accent, anchor="mm")
-        d1.text((x1+170, kpi_top+74), label.upper(), font=_dashboard_font(27, True), fill=TEXT)
-        vf = _fit_text(d1, value, card_w-195, 54, 28, True)
-        d1.text((x1+170, kpi_top+135), str(value), font=vf, fill=accent)
+        d1.ellipse((x1+25, kpi_top+115, x1+155, kpi_top+245), fill=fill_map[i])
+        d1.text((x1+90, kpi_top+180), icon_chars[i], font=_dashboard_font(58, True), fill=accent, anchor="mm")
+        d1.text((x1+178, kpi_top+78), label.upper(), font=_dashboard_font(44, True), fill=TEXT)
+        vf = _fit_text(d1, value, card_w-205, 76, 38, True)
+        d1.text((x1+178, kpi_top+158), str(value), font=vf, fill=accent)
 
     # Main charts
-    y1, y2 = 690, 1740
+    y1, y2 = 735, 1745
     left = (M, y1, 2280, y2)
     right = (2310, y1, W-M, y2)
     for box, title in ((left, figures[0][0]), (right, figures[1][0])):
         _rounded_card(d1, box, radius=28, fill="white")
         bar_w = min(850, box[2]-box[0]-50)
         d1.rounded_rectangle((box[0]+24, box[1]+22, box[0]+bar_w, box[1]+92), radius=13, fill=NAVY)
-        d1.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(30, True), fill="white")
+        d1.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(38, True), fill="white")
     _paste_chart(p1, figures[0][1], (left[0]+30, left[1]+115, left[2]-30, left[3]-30))
     _paste_chart(p1, figures[1][1], (right[0]+30, right[1]+115, right[2]-30, right[3]-30))
 
     # Insights as four readable cards
-    insight_top, insight_bottom = 1790, 2380
+    insight_top, insight_bottom = 1795, 2395
     d1.rounded_rectangle((M, insight_top, W-M, insight_bottom), radius=30, fill="#FFF4C8", outline="#EDBE34", width=3)
     title_w = 510
     d1.rounded_rectangle((M, insight_top, M+title_w, insight_bottom), radius=30, fill="#FFBF1A")
-    d1.text((M+70, insight_top+155), "KEY QUALITY", font=_dashboard_font(36, True), fill=NAVY_DARK)
-    d1.text((M+70, insight_top+220), "INSIGHTS", font=_dashboard_font(48, True), fill=NAVY_DARK)
+    d1.text((M+70, insight_top+155), "KEY QUALITY", font=_dashboard_font(44, True), fill=NAVY_DARK)
+    d1.text((M+70, insight_top+220), "INSIGHTS", font=_dashboard_font(58, True), fill=NAVY_DARK)
     d1.text((M+255, insight_top+370), "!", font=_dashboard_font(90, True), fill="white", anchor="mm")
     available = W-M-(M+title_w)-40
     iw = available // 4
@@ -899,9 +899,9 @@ def build_dashboard_pages(
         x1 = M+title_w+20+i*iw
         if i:
             d1.line((x1, insight_top+45, x1, insight_bottom-45), fill="#D2B45D", width=3)
-        font = _dashboard_font(27, True)
+        font = _dashboard_font(34, True)
         lines = _wrap_lines(d1, insight, font, iw-50, max_lines=7)
-        d1.multiline_text((x1+24, insight_top+95), "\n".join(lines), font=font, fill=TEXT, spacing=17)
+        d1.multiline_text((x1+24, insight_top+95), "\n".join(lines), font=font, fill=TEXT, spacing=22)
 
     # PAGE 2 — Detailed rankings
     p2, d2 = page()
@@ -910,7 +910,7 @@ def build_dashboard_pages(
     for (title, fig), box in zip(figures[2:5], row_boxes):
         _rounded_card(d2, box, radius=28, fill="white")
         d2.rounded_rectangle((box[0]+24, box[1]+22, box[0]+910, box[1]+92), radius=13, fill=NAVY)
-        d2.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(30, True), fill="white")
+        d2.text((box[0]+48, box[1]+39), title.upper(), font=_dashboard_font(38, True), fill="white")
         _paste_chart(p2, fig, (box[0]+35, box[1]+115, box[2]-35, box[3]-30))
 
     # Summary footer on page 2
@@ -921,8 +921,8 @@ def build_dashboard_pages(
         x1=M+i*sw; x2=x1+sw
         if i:
             d2.line((x1, fy1+18, x1, fy2-18), fill="#4B6994", width=2)
-        d2.text(((x1+x2)//2, fy1+22), label.upper(), font=_dashboard_font(18, True), fill="#EAF1FF", anchor="ma")
-        vf=_fit_text(d2, value, sw-28, 31, 20, True)
+        d2.text(((x1+x2)//2, fy1+22), label.upper(), font=_dashboard_font(27, True), fill="#EAF1FF", anchor="ma")
+        vf=_fit_text(d2, value, sw-28, 42, 28, True)
         d2.text(((x1+x2)//2, fy1+65), str(value), font=vf, fill=accent, anchor="ma")
 
     return [p1, p2]
