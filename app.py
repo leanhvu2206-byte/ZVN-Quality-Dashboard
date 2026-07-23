@@ -166,6 +166,15 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 }}
 
 
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Export-only CSS is deliberately kept in a non-f-string to avoid brace parsing errors.
+st.markdown(
+    """
+<style>
 /* ===== V25 EXPORT TEXT OVERLAP FIX ===== */
 body.export-mode .upload-panel,
 body.export-mode [data-testid="stFileUploader"],
@@ -274,10 +283,12 @@ body.export-mode .insight-detail {
     line-height: 1.2 !important;
     white-space: normal !important;
 }
+
 </style>
 """,
     unsafe_allow_html=True,
 )
+
 
 # ============================================================
 # DATA LOADING
