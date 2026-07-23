@@ -1400,7 +1400,7 @@ components.html(
       #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
     </style>
     <div class="export-wrap">
-      <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
+      <button id="exportBtn" class="export-btn">⬇️ EXPORT INTERFACE </button>
       <div id="status">Ảnh sẽ chụp từ tiêu đề IQC QUALITY DASHBOARD đến ngay phía trên khu vực Export.</div>
     </div>
     <script>
