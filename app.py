@@ -273,7 +273,7 @@ body.export-mode .insight-detail {
     font-size: 11px !important;
     line-height: 1.2 !important;
     white-space: normal !important;
-}
+}}
 </style>
 """,
     unsafe_allow_html=True,
