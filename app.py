@@ -12,6 +12,7 @@ from typing import Iterable
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -944,6 +945,8 @@ def dashboard_pages_bytes(images: list[Image.Image], output_format: str) -> tupl
 # ============================================================
 # DATA SOURCE
 # ============================================================
+st.markdown('<div id="dashboard-capture-start"></div>', unsafe_allow_html=True)
+
 with st.container(key="topbar"):
     title_col, month_col, week_col, vendor_col, item_col = st.columns([3.35, .72, .72, .72, .72], gap="small")
     with title_col:
@@ -1366,84 +1369,118 @@ footer_html += '</div>'
 st.markdown(footer_html, unsafe_allow_html=True)
 
 # ============================================================
-# ONE-BUTTON FULL DASHBOARD EXPORT
+# ONE-BUTTON FULL DASHBOARD SCREENSHOT EXPORT
 # ============================================================
-full_figures = [("Month-over-Month Performance", month_fig), ("Disposition", donut)] + rank_figures
-full_metrics = [
-    ("Total Received", number(received), NAVY_MID),
-    ("Approved", number(approved), GREEN),
-    ("Rejected", number(rejected), RED),
-    ("Reject Rate", pct(reject_rate), ORANGE),
-    ("Top Defective Item", top_item, PURPLE),
-]
-full_insights = [
-    f"Top PO reject: {top_po} — {number(top_po_qty)} rejected pcs",
-    f"Top inspection day by reject: {top_day} — {number(top_day_qty)} rejected pcs",
-    f"Top defect group: {top_defect_group} — {number(top_defect_group_qty)} rejected pcs",
-    f"Top 1 vendor: {top_vendor} — {number(top1_vendor_qty)} rejected pcs ({pct(top1_vendor_share)})",
-]
-full_footer = [
-    ("Total Received", number(received), "#FFFFFF"),
-    ("Total Accepted", number(approved), "#42D67B"),
-    ("Total Rejected", number(rejected), "#FF665C"),
-    ("Defect Rate", pct(reject_rate), "#FFD33D"),
-    ("Vendors", number(counter_count), "#FFFFFF"),
-    ("Supplier PPM", number(round(supplier_ppm)), "#FFD33D"),
-]
+# Capture the actual browser-rendered dashboard so the exported image keeps
+# exactly the same fonts, colors, spacing and chart layout as the web page.
+st.markdown('<div id="dashboard-capture-end"></div>', unsafe_allow_html=True)
 
 st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Tạo và tải toàn bộ dashboard đã lọc thành PDF 2 trang.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Chụp nguyên giao diện dashboard hiện tại thành một ảnh PNG chất lượng cao.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
 
-report_period = month if week == "(All)" else f"{month}_{week}"
-report_state_key = f"{source_name}|{month}|{week}|{vendor}|{item}|{len(filtered)}|{received}|{rejected}"
+components.html(
+    """
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+      html, body { margin:0; padding:0; background:transparent; font-family:Arial,Helvetica,sans-serif; }
+      .export-wrap { padding:8px 0 2px; }
+      .export-btn {
+        width:100%; height:48px; border:0; border-radius:8px;
+        background:#073B7A; color:#fff; font-size:16px; font-weight:900;
+        cursor:pointer; box-shadow:0 3px 10px rgba(7,59,122,.22);
+      }
+      .export-btn:hover { background:#0A56B5; }
+      .export-btn:disabled { opacity:.65; cursor:wait; }
+      #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
+    </style>
+    <div class="export-wrap">
+      <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
+      <div id="status">Ảnh sẽ chụp từ tiêu đề IQC QUALITY DASHBOARD đến ngay phía trên khu vực Export.</div>
+    </div>
+    <script>
+    const btn = document.getElementById('exportBtn');
+    const status = document.getElementById('status');
 
-if st.button(
-    "📄 TẠO FILE PDF TOÀN BỘ DASHBOARD",
-    use_container_width=True,
-    type="primary",
-    key="create_full_dashboard_pdf",
-):
-    try:
-        with st.spinner("Đang tạo báo cáo PDF 2 trang..."):
-            dashboard_pages = build_dashboard_pages(
-                report_month=report_period,
-                source=source_name or "Uploaded file",
-                metrics=full_metrics,
-                insights=full_insights,
-                figures=full_figures,
-                footer_metrics=full_footer,
-            )
-            export_bytes, export_mime, extension = dashboard_pages_bytes(dashboard_pages, "PDF")
-        st.session_state["full_report_pdf_bytes"] = export_bytes
-        st.session_state["full_report_pdf_key"] = report_state_key
-        st.success("Đã tạo PDF thành công. Bấm nút bên dưới để tải về máy.")
-    except Exception as export_error:
-        st.session_state.pop("full_report_pdf_bytes", None)
-        st.session_state.pop("full_report_pdf_key", None)
-        st.error(f"Không thể tạo file PDF: {export_error}")
+    function safeName() {
+      const now = new Date();
+      const p = n => String(n).padStart(2,'0');
+      return `IQC_Quality_Dashboard_${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}.png`;
+    }
 
-if (
-    st.session_state.get("full_report_pdf_bytes") is not None
-    and st.session_state.get("full_report_pdf_key") == report_state_key
-):
-    st.download_button(
-        "⬇️ TẢI FILE PDF VỀ MÁY",
-        data=st.session_state["full_report_pdf_bytes"],
-        file_name=f"IQC_Quality_Report_{report_period}.pdf",
-        mime="application/pdf",
-        use_container_width=True,
-        type="primary",
-        key="download_full_dashboard_pdf",
-    )
-    st.caption("PDF gồm 2 trang A4 ngang và sử dụng đúng dữ liệu theo bộ lọc hiện tại.")
-else:
-    st.caption("Bấm “TẠO FILE PDF TOÀN BỘ DASHBOARD” để chuẩn bị file tải xuống.")
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = '⏳ ĐANG CHỤP DASHBOARD...';
+      status.textContent = 'Vui lòng chờ vài giây, hệ thống đang tạo ảnh chất lượng cao.';
+      try {
+        const doc = window.parent.document;
+        const start = doc.getElementById('dashboard-capture-start');
+        const end = doc.getElementById('dashboard-capture-end');
+        if (!start || !end) throw new Error('Không tìm thấy vùng dashboard cần chụp.');
+
+        const container = start.closest('.block-container') || doc.querySelector('.block-container');
+        if (!container) throw new Error('Không tìm thấy vùng nội dung Streamlit.');
+
+        await new Promise(resolve => setTimeout(resolve, 650));
+
+        const containerRect = container.getBoundingClientRect();
+        const startRect = start.getBoundingClientRect();
+        const endRect = end.getBoundingClientRect();
+        const startY = Math.max(0, startRect.top - containerRect.top);
+        const endY = Math.max(startY + 100, endRect.top - containerRect.top);
+
+        const scale = 2;
+        const fullCanvas = await html2canvas(container, {
+          scale: scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#F2F5FA',
+          logging: false,
+          scrollX: 0,
+          scrollY: -window.parent.scrollY,
+          windowWidth: doc.documentElement.scrollWidth,
+          windowHeight: doc.documentElement.scrollHeight
+        });
+
+        const cropY = Math.round(startY * scale);
+        const cropH = Math.round((endY - startY) * scale);
+        const output = document.createElement('canvas');
+        output.width = fullCanvas.width;
+        output.height = cropH;
+        const ctx = output.getContext('2d');
+        ctx.fillStyle = '#F2F5FA';
+        ctx.fillRect(0, 0, output.width, output.height);
+        ctx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
+
+        output.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = doc.createElement('a');
+          a.href = url;
+          a.download = safeName();
+          doc.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          status.textContent = 'Đã tạo ảnh. File đang được tải về máy.';
+          btn.disabled = false;
+          btn.textContent = '⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH';
+        }, 'image/png', 1.0);
+      } catch (err) {
+        status.textContent = 'Không thể tạo ảnh: ' + err.message;
+        btn.disabled = false;
+        btn.textContent = '⬇️ THỬ XUẤT LẠI DASHBOARD';
+      }
+    });
+    </script>
+    """,
+    height=88,
+    scrolling=False,
+)
 
 st.markdown(
     f'<div class="source-note">Source: {safe(source_name)} · Defect Rate = Rejected Qty / Received Qty × 100%</div>',
