@@ -164,6 +164,116 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
   .insight-item {{border-top:1px dashed #8D98A7;}}
   .summary-strip {{grid-template-columns:repeat(2,1fr);}}
 }}
+
+
+/* ===== V25 EXPORT TEXT OVERLAP FIX ===== */
+body.export-mode .upload-panel,
+body.export-mode [data-testid="stFileUploader"],
+body.export-mode details[data-testid="stExpander"] {
+    display: none !important;
+}
+
+body.export-mode .dashboard-root {
+    width: 1360px !important;
+    max-width: 1360px !important;
+    min-width: 1360px !important;
+    margin: 0 auto !important;
+}
+
+body.export-mode .dashboard-title,
+body.export-mode .main-title,
+body.export-mode .title-text {
+    font-size: 34px !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+body.export-mode .dashboard-subtitle,
+body.export-mode .subtitle-text {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    margin-top: 6px !important;
+}
+
+body.export-mode .kpi-card {
+    min-height: 118px !important;
+    height: 118px !important;
+    padding: 16px 14px !important;
+    align-items: center !important;
+}
+
+body.export-mode .kpi-label {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 7px !important;
+    white-space: normal !important;
+}
+
+body.export-mode .kpi-value {
+    font-size: 25px !important;
+    line-height: 1.08 !important;
+    margin-bottom: 7px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+body.export-mode .kpi-card.vendor-card .kpi-value,
+body.export-mode .kpi-card.item-card .kpi-value,
+body.export-mode .vendor-text,
+body.export-mode .item-text {
+    font-size: 20px !important;
+    line-height: 1.08 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    max-width: 190px !important;
+}
+
+body.export-mode .kpi-subtext {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+}
+
+body.export-mode .insights-strip,
+body.export-mode .insight-wrapper {
+    min-height: 104px !important;
+    height: 104px !important;
+}
+
+body.export-mode .insight-box,
+body.export-mode .insight-item {
+    min-height: 104px !important;
+    padding: 14px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+body.export-mode .insight-title {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    margin-bottom: 7px !important;
+}
+
+body.export-mode .insight-value {
+    font-size: 17px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+body.export-mode .insight-sub,
+body.export-mode .insight-detail {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -982,6 +1092,7 @@ with st.container(key="topbar"):
     item_placeholder = item_col.empty()
 
 with st.container(key="upload_panel"):
+    st.markdown('<div class="upload-panel">', unsafe_allow_html=True)
     with st.expander("📤 Upload / change data file", expanded=False):
         uploaded = st.file_uploader(
             "Upload IQC file",
@@ -989,6 +1100,7 @@ with st.container(key="upload_panel"):
             label_visibility="collapsed",
         )
         st.caption("Đặt file mặc định tại `data/IQC_Data.xlsx` để mọi người xem chung một dữ liệu.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 try:
     if uploaded is not None:
@@ -1148,6 +1260,7 @@ for icon, label, value, unit, color in kpis:
         '</div></div>'
     )
 kpi_html += '</div>'
+st.markdown('</div>', unsafe_allow_html=True)
 st.markdown(kpi_html, unsafe_allow_html=True)
 
 # ============================================================
