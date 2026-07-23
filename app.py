@@ -1529,6 +1529,7 @@ st.markdown(
 
 components.html(
     """
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
     <style>
       html, body { margin:0; padding:0; background:transparent; font-family:Arial,Helvetica,sans-serif; }
       .export-wrap { padding:8px 0 2px; }
@@ -1542,8 +1543,8 @@ components.html(
       #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
     </style>
     <div class="export-wrap">
-      <button id="exportBtn" class="export-btn">📸 CHỤP TOÀN BỘ DASHBOARD VÀ LƯU PNG</button>
-      <div id="status">Chọn tab dashboard hiện tại khi trình duyệt hỏi quyền. Hệ thống sẽ tự cuộn và ghép ảnh.</div>
+      <button id="exportBtn" class="export-btn">📸 TẢI TOÀN BỘ DASHBOARD DẠNG PNG</button>
+      <div id="status">Hệ thống sẽ tạo một bản sao cố định của dashboard rồi xuất ảnh, không cuộn và không làm thay đổi giao diện đang xem.</div>
     </div>
     <script>
     const btn = document.getElementById('exportBtn');
@@ -1552,7 +1553,6 @@ components.html(
     const parentDoc = parentWin.document;
 
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    const nextPaint = () => new Promise(resolve => parentWin.requestAnimationFrame(() => parentWin.requestAnimationFrame(resolve)));
 
     function safeName() {
       const now = new Date();
@@ -1560,166 +1560,149 @@ components.html(
       return `IQC_Quality_Dashboard_${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}_${p(now.getHours())}${p(now.getMinutes())}.png`;
     }
 
-    async function waitForVideoFrame(video) {
-      if (video.readyState >= 2 && video.videoWidth > 0) return;
-      await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Không nhận được hình ảnh từ tab đã chọn.')), 10000);
-        video.onloadedmetadata = () => {
-          clearTimeout(timer);
-          resolve();
-        };
-      });
+    function directChildOf(container, node) {
+      let current = node;
+      while (current && current.parentElement !== container) current = current.parentElement;
+      return current;
     }
 
-    async function captureDashboardPixels() {
+    function removeElementBlock(element) {
+      if (!element) return;
+      const block = element.closest('[data-testid="stElementContainer"]') ||
+                    element.closest('[data-testid="stVerticalBlockBorderWrapper"]') ||
+                    element;
+      block.remove();
+    }
+
+    async function waitForAssets(root) {
+      try { await parentDoc.fonts.ready; } catch (_) {}
+      const images = Array.from(root.querySelectorAll('img'));
+      await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+        img.addEventListener('load', resolve, {once:true});
+        img.addEventListener('error', resolve, {once:true});
+      })));
+      await sleep(500);
+    }
+
+    async function exportDashboard() {
+      if (!window.htmlToImage) throw new Error('Thư viện xuất ảnh chưa tải xong. Hãy thử lại sau vài giây.');
+
       const startMarker = parentDoc.getElementById('dashboard-capture-start');
       const endMarker = parentDoc.getElementById('dashboard-capture-end');
-      if (!startMarker || !endMarker) throw new Error('Không tìm thấy vùng dashboard cần chụp.');
+      if (!startMarker || !endMarker) throw new Error('Không tìm thấy vùng dashboard cần xuất.');
 
-      const block = startMarker.closest('.block-container') || parentDoc.querySelector('.block-container');
-      if (!block) throw new Error('Không tìm thấy vùng nội dung dashboard.');
+      const source = startMarker.closest('.block-container') || parentDoc.querySelector('.block-container');
+      if (!source) throw new Error('Không tìm thấy vùng nội dung dashboard.');
 
-      // Save the user's current position and temporarily collapse the upload panel.
-      const originalScrollY = parentWin.scrollY;
-      const uploadPanel = parentDoc.querySelector('[data-testid="stVerticalBlockBorderWrapper"] details');
-      const uploadWasOpen = uploadPanel ? uploadPanel.open : false;
-      if (uploadPanel && uploadPanel.open) {
-        uploadPanel.open = false;
-        await nextPaint();
-        await sleep(250);
-      }
+      // Clone the already-rendered DOM. The original page is never resized or restyled.
+      const clone = source.cloneNode(true);
+      const cloneStart = clone.querySelector('#dashboard-capture-start');
+      const cloneEnd = clone.querySelector('#dashboard-capture-end');
+      if (!cloneStart || !cloneEnd) throw new Error('Không thể xác định giới hạn ảnh trong bản sao dashboard.');
 
-      // Browser permission is required once. Select the current Streamlit tab.
-      let stream;
+      const startChild = directChildOf(clone, cloneStart);
+      const endChild = directChildOf(clone, cloneEnd);
+      if (!startChild || !endChild) throw new Error('Cấu trúc dashboard không hợp lệ.');
+
+      // Keep only the blocks from the dashboard title through the footer summary.
+      const children = Array.from(clone.children);
+      const startIndex = children.indexOf(startChild);
+      const endIndex = children.indexOf(endChild);
+      children.forEach((child, index) => {
+        if (index < startIndex || index >= endIndex) child.remove();
+      });
+
+      // The upload panel is useful on the web but should not appear in a management report.
+      clone.querySelectorAll('[data-testid="stFileUploader"], .st-key-upload_panel').forEach(removeElementBlock);
+      clone.querySelectorAll('details').forEach(details => {
+        if (details.querySelector('[data-testid="stFileUploader"]')) removeElementBlock(details);
+      });
+
+      // Remove Streamlit controls and chart toolbars from the exported copy only.
+      clone.querySelectorAll('[data-testid="stToolbar"], [data-testid="stStatusWidget"], .modebar, button[title*="View fullscreen"]').forEach(el => el.remove());
+      clone.querySelectorAll('#dashboard-capture-start, #dashboard-capture-end').forEach(el => el.remove());
+
+      // Use a fixed professional canvas width so responsive cards never collapse.
+      const exportWidth = 1600;
+      Object.assign(clone.style, {
+        position: 'fixed',
+        left: '-100000px',
+        top: '0',
+        width: `${exportWidth}px`,
+        minWidth: `${exportWidth}px`,
+        maxWidth: `${exportWidth}px`,
+        margin: '0',
+        padding: '10px 18px 18px',
+        background: '#F2F5FA',
+        zIndex: '-9999',
+        overflow: 'visible'
+      });
+      clone.classList.add('iqc-export-clone');
+
+      // Small export-only safeguards. These rules affect the clone, not the live dashboard.
+      const style = parentDoc.createElement('style');
+      style.textContent = `
+        .iqc-export-clone .st-key-topbar { min-height: 96px !important; }
+        .iqc-export-clone .dash-title { font-size: 38px !important; line-height: 1.08 !important; white-space: nowrap !important; }
+        .iqc-export-clone .dash-subtitle { font-size: 12px !important; }
+        .iqc-export-clone .kpi { min-height: 126px !important; }
+        .iqc-export-clone .kpi-value { overflow: visible !important; text-overflow: clip !important; }
+        .iqc-export-clone .kpi.top-vendor .kpi-value,
+        .iqc-export-clone .kpi.top-item .kpi-value { font-size: 20px !important; line-height: 1.18 !important; white-space: normal !important; overflow-wrap: normal !important; word-break: normal !important; }
+        .iqc-export-clone .insights { min-height: 150px !important; }
+        .iqc-export-clone .insight-copy { font-size: 14px !important; line-height: 1.35 !important; }
+        .iqc-export-clone div[data-testid="stPlotlyChart"] { width: 100% !important; }
+      `;
+      parentDoc.head.appendChild(style);
+      parentDoc.body.appendChild(clone);
+
       try {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            displaySurface: 'browser',
-            frameRate: { ideal: 10, max: 15 }
+        await waitForAssets(clone);
+        const exportHeight = Math.ceil(clone.scrollHeight);
+        status.textContent = 'Đang tạo ảnh PNG chất lượng cao...';
+
+        const dataUrl = await window.htmlToImage.toPng(clone, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#F2F5FA',
+          width: exportWidth,
+          height: exportHeight,
+          canvasWidth: exportWidth * 2,
+          canvasHeight: exportHeight * 2,
+          style: {
+            transform: 'none',
+            transformOrigin: 'top left'
           },
-          audio: false,
-          preferCurrentTab: true,
-          selfBrowserSurface: 'include',
-          surfaceSwitching: 'exclude'
+          filter: node => {
+            if (!(node instanceof parentWin.HTMLElement)) return true;
+            return !node.matches('[data-testid="stToolbar"], .modebar');
+          }
         });
 
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.muted = true;
-        video.playsInline = true;
-        await video.play();
-        await waitForVideoFrame(video);
-        await sleep(600);
-
-        // Absolute document coordinates after layout is stable.
-        const startAbs = startMarker.getBoundingClientRect().top + parentWin.scrollY;
-        const endAbs = endMarker.getBoundingClientRect().top + parentWin.scrollY;
-        if (endAbs <= startAbs) throw new Error('Vùng chụp không hợp lệ.');
-
-        const blockRect = block.getBoundingClientRect();
-        const viewportW = parentWin.innerWidth;
-        const viewportH = parentWin.innerHeight;
-        const scaleX = video.videoWidth / viewportW;
-        const scaleY = video.videoHeight / viewportH;
-
-        // Crop horizontally to the actual Streamlit dashboard content.
-        const cropLeftCss = Math.max(0, blockRect.left);
-        const cropWidthCss = Math.min(blockRect.width, viewportW - cropLeftCss);
-        const outWidth = Math.max(1, Math.round(cropWidthCss * scaleX));
-        const outHeight = Math.max(1, Math.round((endAbs - startAbs) * scaleY));
-
-        const output = document.createElement('canvas');
-        output.width = outWidth;
-        output.height = outHeight;
-        const outCtx = output.getContext('2d');
-        outCtx.fillStyle = '#F2F5FA';
-        outCtx.fillRect(0, 0, outWidth, outHeight);
-
-        const frame = document.createElement('canvas');
-        frame.width = video.videoWidth;
-        frame.height = video.videoHeight;
-        const frameCtx = frame.getContext('2d');
-
-        const maxScroll = Math.max(0, parentDoc.documentElement.scrollHeight - viewportH);
-        const overlap = Math.min(120, Math.round(viewportH * 0.12));
-        const step = Math.max(200, viewportH - overlap);
-        const scrollPositions = [];
-        let y = Math.min(startAbs, maxScroll);
-        while (y < endAbs) {
-          scrollPositions.push(Math.min(y, maxScroll));
-          if (y >= maxScroll) break;
-          y += step;
-        }
-        const lastNeeded = Math.min(Math.max(startAbs, endAbs - viewportH), maxScroll);
-        if (!scrollPositions.length || Math.abs(scrollPositions[scrollPositions.length - 1] - lastNeeded) > 4) {
-          scrollPositions.push(lastNeeded);
-        }
-
-        let coveredUntil = startAbs;
-        for (let i = 0; i < scrollPositions.length; i++) {
-          const scrollY = scrollPositions[i];
-          status.textContent = `Đang chụp phần ${i + 1}/${scrollPositions.length}...`;
-          parentWin.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
-          await nextPaint();
-          await sleep(420);
-
-          frameCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-          const visibleStart = Math.max(startAbs, scrollY, coveredUntil);
-          const visibleEnd = Math.min(endAbs, scrollY + viewportH);
-          if (visibleEnd <= visibleStart) continue;
-
-          const srcX = Math.round(cropLeftCss * scaleX);
-          const srcY = Math.round((visibleStart - scrollY) * scaleY);
-          const srcW = outWidth;
-          const srcH = Math.round((visibleEnd - visibleStart) * scaleY);
-          const destY = Math.round((visibleStart - startAbs) * scaleY);
-
-          outCtx.drawImage(frame, srcX, srcY, srcW, srcH, 0, destY, srcW, srcH);
-          coveredUntil = visibleEnd;
-          if (coveredUntil >= endAbs - 1) break;
-        }
-
-        await new Promise((resolve, reject) => {
-          output.toBlob(blob => {
-            if (!blob) {
-              reject(new Error('Không tạo được file PNG.'));
-              return;
-            }
-            const url = URL.createObjectURL(blob);
-            const a = parentDoc.createElement('a');
-            a.href = url;
-            a.download = safeName();
-            parentDoc.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 3000);
-            resolve();
-          }, 'image/png', 1.0);
-        });
+        const a = parentDoc.createElement('a');
+        a.href = dataUrl;
+        a.download = safeName();
+        parentDoc.body.appendChild(a);
+        a.click();
+        a.remove();
       } finally {
-        if (stream) stream.getTracks().forEach(track => track.stop());
-        parentWin.scrollTo({ top: originalScrollY, left: 0, behavior: 'instant' });
-        if (uploadPanel && uploadWasOpen) uploadPanel.open = true;
-        await nextPaint();
+        clone.remove();
+        style.remove();
       }
     }
 
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      btn.textContent = '⏳ ĐANG CHỤP VÀ GHÉP ẢNH...';
-      status.textContent = 'Khi trình duyệt hỏi, chọn đúng tab dashboard hiện tại rồi bấm Share.';
+      btn.textContent = '⏳ ĐANG TẠO ẢNH...';
+      status.textContent = 'Giữ nguyên trang trong vài giây. Giao diện đang xem sẽ không bị thay đổi.';
       try {
-        await captureDashboardPixels();
-        status.textContent = 'Đã chụp xong. Ảnh PNG đang được tải về máy.';
-        btn.textContent = '📸 CHỤP LẠI TOÀN BỘ DASHBOARD';
+        await exportDashboard();
+        status.textContent = 'Đã tạo xong ảnh PNG và tải về máy.';
+        btn.textContent = '📸 TẢI LẠI TOÀN BỘ DASHBOARD DẠNG PNG';
       } catch (err) {
-        if (err && err.name === 'NotAllowedError') {
-          status.textContent = 'Bạn đã hủy hoặc chưa cấp quyền chụp tab.';
-        } else {
-          status.textContent = 'Không thể chụp ảnh: ' + (err?.message || err);
-        }
-        btn.textContent = '📸 THỬ CHỤP LẠI DASHBOARD';
+        console.error(err);
+        status.textContent = 'Không thể tạo ảnh: ' + (err?.message || err);
+        btn.textContent = '📸 THỬ TẠO LẠI ẢNH DASHBOARD';
       } finally {
         btn.disabled = false;
       }
