@@ -218,7 +218,7 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 
 
 /* Final export tuning: vendor name and defect-rate typography */
-.export-mode .kpi.top-vendor .kpi-value {
+.export-mode .kpi.top-vendor .kpi-value {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 15px !important;
     font-weight: 700 !important;
@@ -229,39 +229,39 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
     overflow-wrap: normal !important;
     word-break: normal !important;
     margin-top: 1px !important;
-}
-.export-mode .kpi.top-vendor .kpi-unit {
+}}
+.export-mode .kpi.top-vendor .kpi-unit {{
     font-size: 8.5px !important;
     line-height: 1.3 !important;
     margin-top: 7px !important;
     letter-spacing: .25px !important;
     word-spacing: 1.5px !important;
-}
-.export-mode .kpi.defect-rate .kpi-value {
+}}
+.export-mode .kpi.defect-rate .kpi-value {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 25px !important;
     font-weight: 700 !important;
     line-height: 1.12 !important;
     letter-spacing: .65px !important;
     margin-top: 2px !important;
-}
-.export-mode .kpi.defect-rate .kpi-unit {
+}}
+.export-mode .kpi.defect-rate .kpi-unit {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 8.5px !important;
     font-weight: 600 !important;
     line-height: 1.3 !important;
     letter-spacing: .25px !important;
     margin-top: 7px !important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-label {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-label {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 8.5px !important;
     font-weight: 700 !important;
     line-height: 1.25 !important;
     letter-spacing: .4px !important;
     margin-bottom: 3px !important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-value {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-value {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 23px !important;
     font-weight: 700 !important;
@@ -269,8 +269,8 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
     letter-spacing: .65px !important;
     margin-top: 2px !important;
     margin-bottom: 4px !important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-unit {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-unit {{
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 7.5px !important;
     font-weight: 600 !important;
@@ -278,7 +278,7 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
     letter-spacing: .2px !important;
     white-space: normal !important;
     max-width: 115px !important;
-}
+}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
