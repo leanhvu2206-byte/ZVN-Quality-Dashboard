@@ -156,6 +156,19 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .insight-copy b {{font-size:15px;line-height:1.25;}}
 .export-mode .insight-copy .insight-note {{font-size:13px;line-height:1.3;}}
 .export-mode .chart-title {{font-size:15px;}}
+/* Compact only the areas that tend to overlap in html2canvas export */
+.export-mode .kpi:nth-child(3) .kpi-label {{font-size:10px;line-height:1.1;}}
+.export-mode .kpi:nth-child(3) .kpi-value {{font-size:25px;line-height:1.05;}}
+.export-mode .kpi:nth-child(3) .kpi-unit {{font-size:9px;line-height:1.15;margin-top:5px;}}
+.export-mode .kpi:nth-child(5) .kpi-label {{font-size:9.5px;line-height:1.08;}}
+.export-mode .kpi:nth-child(5) .kpi-value {{font-size:17px;line-height:1.12;}}
+.export-mode .kpi:nth-child(5) .kpi-unit {{font-size:9px;line-height:1.12;margin-top:5px;}}
+.export-mode .insights .insight-item:last-child .insight-label {{font-size:10px;line-height:1.1;}}
+.export-mode .insights .insight-item:last-child b {{font-size:13px;line-height:1.15;}}
+.export-mode .insights .insight-item:last-child .insight-note {{font-size:11px;line-height:1.2;}}
+.export-mode .summary-item:nth-child(4) .summary-label {{font-size:9px;line-height:1.05;}}
+.export-mode .summary-item:nth-child(4) .summary-value {{font-size:23px;line-height:1.0;}}
+.export-mode .summary-item:nth-child(4) .summary-unit {{font-size:9px;line-height:1.1;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1054,18 +1067,21 @@ quarantine = float(filtered[c["quarantine"]].sum())
 to_inspect = float(filtered[c["to_inspect"]].sum())
 reject_rate = rejected / received if received else 0.0
 
-vendor_rej = filtered[filtered[c["vendor"]] != "(Blank)"].groupby(c["vendor"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
-item_rej = filtered[filtered[c["item"]] != "(Blank)"].groupby(c["item"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
-defect_rej = filtered[filtered[c["defect"]] != "(Blank)"].groupby(c["defect"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False).head(5)
+vendor_rej = filtered[filtered[c["vendor"]] != "(Blank)"].groupby(c["vendor"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
+vendor_rej = vendor_rej[vendor_rej > 0].head(5)
+item_rej = filtered[filtered[c["item"]] != "(Blank)"].groupby(c["item"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
+item_rej = item_rej[item_rej > 0].head(5)
+defect_rej = filtered[filtered[c["defect"]] != "(Blank)"].groupby(c["defect"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
+defect_rej = defect_rej[defect_rej > 0].head(5)
 line_rej = filtered[filtered[c["location"]] != "(Blank)"].groupby(c["location"], dropna=False)[c["rejected"]].sum().sort_values(ascending=False)
 line_rej = line_rej[line_rej > 0]
 daily_rej = filtered.groupby(filtered[c["date"]].dt.date)[c["rejected"]].sum().sort_index()
 
 top_line = str(line_rej.index[0]) if len(line_rej) else "-"
 top_line_qty = float(line_rej.iloc[0]) if len(line_rej) else 0.0
-top_vendor = str(vendor_rej.index[0]) if len(vendor_rej) else "-"
+top_vendor = str(vendor_rej.index[0]) if len(vendor_rej) else "0"
 top_vendor_qty = float(vendor_rej.iloc[0]) if len(vendor_rej) else 0.0
-top_item = str(item_rej.index[0]) if len(item_rej) else "-"
+top_item = str(item_rej.index[0]) if len(item_rej) else "0"
 top_item_qty = float(item_rej.iloc[0]) if len(item_rej) else 0.0
 top_defect = str(defect_rej.index[0]) if len(defect_rej) else "-"
 top_defect_qty = float(defect_rej.iloc[0]) if len(defect_rej) else 0.0
