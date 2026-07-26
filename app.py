@@ -146,7 +146,7 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .kpi-icon {{width:58px;height:58px;min-width:58px;font-size:27px;margin-right:12px;}}
 .export-mode .kpi-label {{font-size:12px;line-height:1.18;margin-bottom:7px;}}
 .export-mode .kpi-value {{font-size:30px;line-height:1.12;margin-top:0;}}
-.export-mode .kpi.top-vendor .kpi-value, .export-mode .kpi.top-item .kpi-value {{font-size:20px;line-height:1.2;max-width:100%;}}
+.export-mode .kpi.top-vendor .kpi-value, .export-mode .kpi.top-item .kpi-value {{font-size:17px;line-height:1.12;max-width:100%;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;hyphens:auto;}}
 .export-mode .kpi-unit {{font-size:11px;line-height:1.25;margin-top:7px;}}
 .export-mode .insights {{min-height:165px;padding:18px 18px;}}
 .export-mode .insight-head {{font-size:18px;line-height:1.25;}}
@@ -169,6 +169,22 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .summary-item:nth-child(4) .summary-label {{font-size:9px;line-height:1.05;}}
 .export-mode .summary-item:nth-child(4) .summary-value {{font-size:23px;line-height:1.0;}}
 .export-mode .summary-item:nth-child(4) .summary-unit {{font-size:9px;line-height:1.1;}}
+
+/* Stable wrapping for long vendor/item names and rate cards during export */
+.kpi.defect-rate > div:last-child,
+.kpi.top-vendor > div:last-child,
+.kpi.top-item > div:last-child,
+.summary-item.defect-rate-summary > div:last-child {{min-width:0;}}
+.kpi.top-vendor .kpi-value,
+.kpi.top-item .kpi-value {{white-space:normal;overflow-wrap:anywhere;word-break:break-word;}}
+.export-mode .kpi.defect-rate {{padding-top:12px;padding-bottom:12px;}}
+.export-mode .kpi.defect-rate .kpi-label {{font-size:10px;line-height:1.05;margin-bottom:4px;}}
+.export-mode .kpi.defect-rate .kpi-value {{font-size:23px;line-height:1.0;margin:0;white-space:nowrap;}}
+.export-mode .kpi.defect-rate .kpi-unit {{font-size:8.5px;line-height:1.05;margin-top:4px;white-space:normal;}}
+.export-mode .summary-item.defect-rate-summary {{padding-left:6px;padding-right:6px;}}
+.export-mode .summary-item.defect-rate-summary .summary-label {{font-size:8.5px;line-height:1.0;white-space:normal;text-align:left;}}
+.export-mode .summary-item.defect-rate-summary .summary-value {{font-size:20px;line-height:1.0;white-space:nowrap;}}
+.export-mode .summary-item.defect-rate-summary .summary-unit {{font-size:7.5px;line-height:1.05;white-space:normal;max-width:105px;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1121,39 +1137,56 @@ top1_vendor_share = top1_vendor_qty / rejected if rejected else 0.0
 # ============================================================
 # KPI ROW
 # ============================================================
-def display_vendor_name(name: str, max_chars: int = 30) -> str:
-    text = safe(name).strip()
-    if len(text) <= max_chars:
-        return text
-    words = text.split()
-    lines = []
+def display_wrapped_name(name: str, line_chars: int = 14, max_lines: int = 2) -> str:
+    """Add safe HTML line-break opportunities for long vendor/item codes."""
+    text = str(name).strip()
+    if not text:
+        return "0"
+    escaped = safe(text)
+    words = escaped.split()
+    lines: list[str] = []
     current = ""
+
     for word in words:
-        candidate = f"{current} {word}".strip()
-        if len(candidate) <= 17 or not current:
-            current = candidate
-        else:
-            lines.append(current)
-            current = word
-        if len(lines) == 1:
+        # Long codes often have no spaces. Split them into readable chunks.
+        chunks = [word[i:i + line_chars] for i in range(0, len(word), line_chars)] or [word]
+        for chunk in chunks:
+            candidate = f"{current} {chunk}".strip()
+            if current and len(candidate) > line_chars:
+                lines.append(current)
+                current = chunk
+            else:
+                current = candidate
+            if len(lines) >= max_lines:
+                break
+        if len(lines) >= max_lines:
             break
-    if current and len(lines) < 2:
+
+    if current and len(lines) < max_lines:
         lines.append(current)
-    result = "<br>".join(lines[:2])
-    if len(text) > sum(len(x) for x in lines[:2]) + max(0, len(lines[:2]) - 1):
-        result += "…"
-    return result
+
+    shown = "<br>".join(lines[:max_lines])
+    plain_shown = "".join(lines[:max_lines]).replace(" ", "")
+    plain_source = escaped.replace(" ", "")
+    if len(plain_source) > len(plain_shown):
+        shown += "…"
+    return shown
 
 kpis = [
     ("📋", "TOTAL DEFECT", number(rejected), "PCS", RED),
     ("📦", "OUTPUT", number(received), "PCS", NAVY),
     ("✓", "DEFECT RATE", pct(reject_rate), "Rejected / Output", RED),
-    ("🏢", "TOP VENDOR", display_vendor_name(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
-    ("📦", "TOP DEFECTIVE ITEM", safe(top_item), f"{number(top_item_qty)} rejected pcs", NAVY),
+    ("🏢", "TOP VENDOR", display_wrapped_name(top_vendor), f"{number(top_vendor_qty)} rejected pcs", NAVY),
+    ("📦", "TOP DEFECTIVE ITEM", display_wrapped_name(top_item), f"{number(top_item_qty)} rejected pcs", NAVY),
 ]
 kpi_html = '<div class="kpi-row">'
 for icon, label, value, unit, color in kpis:
-    extra_class = ' top-vendor' if label == 'TOP VENDOR' else (' top-item' if label == 'TOP DEFECTIVE ITEM' else '')
+    class_map = {
+        "DEFECT RATE": " defect-rate",
+        "TOP VENDOR": " top-vendor",
+        "TOP DEFECTIVE ITEM": " top-item",
+    }
+    extra_class = class_map.get(label, "")
     kpi_html += (
         f'<div class="kpi{extra_class}">'
         f'<div class="kpi-icon">{icon}</div>'
@@ -1396,8 +1429,9 @@ summary = [
 ]
 footer_html = '<div class="summary-strip">'
 for icon, label, value, unit, value_class in summary:
+    summary_extra_class = " defect-rate-summary" if label == "DEFECT RATE" else ""
     footer_html += (
-        '<div class="summary-item">'
+        f'<div class="summary-item{summary_extra_class}">'
         f'<div class="summary-icon">{icon}</div>'
         '<div>'
         f'<div class="summary-label">{label}</div>'
