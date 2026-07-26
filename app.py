@@ -216,6 +216,70 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .summary-unit {{line-height:1.35!important;word-spacing:1.6px!important;}}
 .export-mode .summary-value {{line-height:1.12!important;margin-top:5px!important;margin-bottom:3px!important;}}
 
+
+/* Final export tuning: vendor name and defect-rate typography */
+.export-mode .kpi.top-vendor .kpi-value {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    line-height: 1.32 !important;
+    letter-spacing: .45px !important;
+    word-spacing: 2px !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    margin-top: 1px !important;
+}
+.export-mode .kpi.top-vendor .kpi-unit {
+    font-size: 8.5px !important;
+    line-height: 1.3 !important;
+    margin-top: 7px !important;
+    letter-spacing: .25px !important;
+    word-spacing: 1.5px !important;
+}
+.export-mode .kpi.defect-rate .kpi-value {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 25px !important;
+    font-weight: 700 !important;
+    line-height: 1.12 !important;
+    letter-spacing: .65px !important;
+    margin-top: 2px !important;
+}
+.export-mode .kpi.defect-rate .kpi-unit {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 8.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    letter-spacing: .25px !important;
+    margin-top: 7px !important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-label {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 8.5px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+    letter-spacing: .4px !important;
+    margin-bottom: 3px !important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-value {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 23px !important;
+    font-weight: 700 !important;
+    line-height: 1.12 !important;
+    letter-spacing: .65px !important;
+    margin-top: 2px !important;
+    margin-bottom: 4px !important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-unit {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 7.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    letter-spacing: .2px !important;
+    white-space: normal !important;
+    max-width: 115px !important;
+}
+
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
   .kpi {{border-bottom:1px solid #E0E5EC;}}
@@ -1167,38 +1231,59 @@ top1_vendor_share = top1_vendor_qty / rejected if rejected else 0.0
 # ============================================================
 # KPI ROW
 # ============================================================
-def display_wrapped_name(name: str, line_chars: int = 14, max_lines: int = 2) -> str:
-    """Add safe HTML line-break opportunities for long vendor/item codes."""
+def beautify_company_name(name: str) -> str:
+    """Make compact supplier names easier to read in KPI/export images."""
     text = str(name).strip()
-    if not text:
+    if not text or text in {"-", "(Blank)"}:
         return "0"
+
+    # Normalize punctuation spacing.
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s*,\s*", ", ", text)
+    text = re.sub(r"\s*\.\s*", ". ", text)
+    text = re.sub(r"\bCO\.?,?\s*LTD\.?\b", "CO., LTD", text, flags=re.I)
+
+    # Common supplier name in the current IQC data source.
+    compact = re.sub(r"[^A-Z0-9]", "", text.upper())
+    if compact.startswith("VANDONGPHAT"):
+        suffix = "CO., LTD" if "COLTD" in compact else ""
+        text = "VAN DONG PHAT" + (f" {suffix}" if suffix else "")
+
+    return text.strip()
+
+
+def display_wrapped_name(name: str, line_chars: int = 14, max_lines: int = 2) -> str:
+    """Wrap long vendor/item values into at most two readable HTML lines."""
+    text = beautify_company_name(name)
+    if text == "0":
+        return "0"
+
     escaped = safe(text)
     words = escaped.split()
     lines: list[str] = []
     current = ""
 
     for word in words:
-        # Long codes often have no spaces. Split them into readable chunks.
-        chunks = [word[i:i + line_chars] for i in range(0, len(word), line_chars)] or [word]
-        for chunk in chunks:
-            candidate = f"{current} {chunk}".strip()
-            if current and len(candidate) > line_chars:
-                lines.append(current)
-                current = chunk
-            else:
-                current = candidate
-            if len(lines) >= max_lines:
-                break
-        if len(lines) >= max_lines:
+        candidate = f"{current} {word}".strip()
+        if current and len(candidate) > line_chars:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+        if len(lines) >= max_lines - 1:
             break
 
     if current and len(lines) < max_lines:
         lines.append(current)
 
+    # Put company suffix on the second line when possible.
+    if len(lines) == 1 and " CO., LTD" in escaped:
+        base, suffix = escaped.split(" CO., LTD", 1)
+        lines = [base, "CO., LTD"]
+
     shown = "<br>".join(lines[:max_lines])
-    plain_shown = "".join(lines[:max_lines]).replace(" ", "")
-    plain_source = escaped.replace(" ", "")
-    if len(plain_source) > len(plain_shown):
+    visible = " ".join(lines[:max_lines])
+    if len(visible.replace(" ", "")) < len(escaped.replace(" ", "")):
         shown += "…"
     return shown
 
