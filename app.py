@@ -1362,12 +1362,17 @@ rank_specs = [
     (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", defect_rej, RED),
 ]
 rank_figures: list[tuple[str, go.Figure]] = []
-for column, title, series, color in rank_specs:
+for rank_index, (column, title, series, color) in enumerate(rank_specs):
     rank_fig = bar_chart(series, color, rejected)
     rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
-        st.plotly_chart(rank_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
+        st.plotly_chart(
+            rank_fig,
+            use_container_width=True,
+            config={"displayModeBar": False, "displaylogo": False, "responsive": True},
+            key=f"rank_chart_{rank_index}",
+        )
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
@@ -1402,6 +1407,28 @@ for icon, label, value, unit, value_class in summary:
     )
 footer_html += '</div>'
 st.markdown(footer_html, unsafe_allow_html=True)
+
+# ============================================================
+# EXPORT DATA
+# ============================================================
+export_data_col, export_note_col = st.columns([1.1, 4.9], gap="small")
+with export_data_col:
+    st.download_button(
+        "⬇️ EXPORT DATA",
+        filtered.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"IQC_filtered_{month}_{week}.csv",
+        mime="text/csv",
+        use_container_width=True,
+        key="export_data_main",
+    )
+with export_note_col:
+    st.markdown(
+        '<div style="height:42px;display:flex;align-items:center;padding:0 14px;'
+        'background:#FFFFFF;border:1px solid #C8D3E1;border-radius:8px;'
+        'font-size:13px;font-weight:700;color:#425466">'
+        'Xuất toàn bộ dữ liệu đang được lọc trên dashboard.</div>',
+        unsafe_allow_html=True,
+    )
 
 # ============================================================
 # ONE-BUTTON FULL DASHBOARD SCREENSHOT EXPORT
