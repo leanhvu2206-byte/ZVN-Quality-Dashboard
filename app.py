@@ -186,6 +186,36 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .summary-item.defect-rate-summary .summary-value {{font-size:20px;line-height:1.0;white-space:nowrap;}}
 .export-mode .summary-item.defect-rate-summary .summary-unit {{font-size:7.5px;line-height:1.05;white-space:normal;max-width:105px;}}
 
+/* Improve text readability in html2canvas export */
+.export-mode .kpi-label,
+.export-mode .kpi-unit,
+.export-mode .insight-label,
+.export-mode .insight-note,
+.export-mode .summary-label,
+.export-mode .summary-unit {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: .35px !important;
+    word-spacing: 1.4px !important;
+    text-rendering: geometricPrecision;
+}}
+.export-mode .kpi-label {{line-height:1.28!important;margin-bottom:7px!important;}}
+.export-mode .kpi-unit {{line-height:1.32!important;margin-top:7px!important;}}
+.export-mode .insight-copy {{gap:10px!important;}}
+.export-mode .insight-copy .insight-label {{line-height:1.3!important;letter-spacing:.45px!important;}}
+.export-mode .insight-copy b {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 800 !important;
+    line-height:1.3!important;
+    letter-spacing:.20px!important;
+    word-spacing:1.2px!important;
+    overflow-wrap:anywhere!important;
+}}
+.export-mode .insight-copy .insight-note {{line-height:1.38!important;}}
+.export-mode .summary-label {{line-height:1.28!important;letter-spacing:.45px!important;}}
+.export-mode .summary-unit {{line-height:1.35!important;word-spacing:1.6px!important;}}
+.export-mode .summary-value {{line-height:1.12!important;margin-top:5px!important;margin-bottom:3px!important;}}
+
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
   .kpi {{border-bottom:1px solid #E0E5EC;}}
@@ -1523,7 +1553,10 @@ components.html(
         if (!container) throw new Error('Không tìm thấy vùng nội dung Streamlit.');
 
         container.classList.add('export-mode');
-        await new Promise(resolve => setTimeout(resolve, 900));
+        if (doc.fonts && doc.fonts.ready) {
+          await doc.fonts.ready;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1200));
 
         const containerRect = container.getBoundingClientRect();
         const startRect = start.getBoundingClientRect();
