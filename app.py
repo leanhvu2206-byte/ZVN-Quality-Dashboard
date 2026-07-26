@@ -280,6 +280,41 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
     max-width: 115px !important;
 }}
 
+
+
+/* Final export tuning: add clear spacing to dashboard headings */
+.export-mode .dash-title {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.25px !important;
+    word-spacing: 4px !important;
+    line-height: 1.15 !important;
+    text-rendering: geometricPrecision;
+}}
+.export-mode .dash-subtitle {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 600 !important;
+    letter-spacing: .45px !important;
+    word-spacing: 1.8px !important;
+    line-height: 1.35 !important;
+}}
+.export-mode .chart-title {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: .75px !important;
+    word-spacing: 2.4px !important;
+    line-height: 1.25 !important;
+    text-rendering: geometricPrecision;
+}}
+.export-mode .insight-head {{
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: .75px !important;
+    word-spacing: 2.4px !important;
+    line-height: 1.35 !important;
+    text-rendering: geometricPrecision;
+}}
+
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
   .kpi {{border-bottom:1px solid #E0E5EC;}}
