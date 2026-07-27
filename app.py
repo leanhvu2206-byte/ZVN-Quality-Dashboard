@@ -589,10 +589,10 @@ def empty_chart(text: str, height: int = 220) -> go.Figure:
     return layout(fig, height, dict(l=5, r=5, t=5, b=5))
 
 
-def bar_chart(series: pd.Series, color: str, total: float) -> go.Figure:
+def bar_chart(series: pd.Series, color: str, total: float, empty_text: str = "No rejected quantity") -> go.Figure:
     s = series.head(5).sort_values(ascending=True)
     if s.empty:
-        return empty_chart("No rejected quantity", 430)
+        return empty_chart(empty_text, 430)
     labels = [f"{value:,.0f} ({value / total:.2%})" if total else f"{value:,.0f}" for value in s.values]
     fig = go.Figure(
         go.Bar(
@@ -1606,21 +1606,33 @@ rank_defect_rej = (
     .sort_values(ascending=False)
 )
 
-# Do not display zero-quantity categories. When no rejects exist, bar_chart()
-# returns a clean white chart showing "No rejected quantity".
+# Top items by Special Released quantity, controlled by the same Month/Week
+# filters as the three rejected-quantity charts.
+rank_special_total = float(rank_filtered[c["special"]].sum())
+rank_item_special = (
+    rank_filtered[rank_filtered[c["item"]] != "(Blank)"]
+    .groupby(c["item"], dropna=False)[c["special"]]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+# Do not display zero-quantity categories. Empty charts keep their title and
+# show a clean white body with a short no-data message.
 rank_vendor_rej = rank_vendor_rej[rank_vendor_rej > 0].head(5)
 rank_item_rej = rank_item_rej[rank_item_rej > 0].head(5)
 rank_defect_rej = rank_defect_rej[rank_defect_rej > 0].head(5)
+rank_item_special = rank_item_special[rank_item_special > 0].head(5)
 
-rank_cols = st.columns(3, gap="small")
+rank_cols = st.columns(4, gap="small")
 rank_specs = [
-    (rank_cols[0], "TOP VENDORS BY REJECTED QTY", rank_vendor_rej, "#1457B8"),
-    (rank_cols[1], "TOP ITEMS BY REJECTED QTY", rank_item_rej, "#2474D8"),
-    (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", rank_defect_rej, RED),
+    (rank_cols[0], "TOP VENDORS BY REJECTED QTY", rank_vendor_rej, "#1457B8", rank_rejected, "No rejected quantity"),
+    (rank_cols[1], "TOP ITEMS BY REJECTED QTY", rank_item_rej, "#2474D8", rank_rejected, "No rejected quantity"),
+    (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", rank_defect_rej, RED, rank_rejected, "No rejected quantity"),
+    (rank_cols[3], "TOP ITEMS BY SPECIAL RELEASE", rank_item_special, ORANGE, rank_special_total, "No special released quantity"),
 ]
 rank_figures: list[tuple[str, go.Figure]] = []
-for rank_index, (column, title, series, color) in enumerate(rank_specs):
-    rank_fig = bar_chart(series, color, rank_rejected)
+for rank_index, (column, title, series, color, chart_total, empty_text) in enumerate(rank_specs):
+    rank_fig = bar_chart(series, color, chart_total, empty_text)
     rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
