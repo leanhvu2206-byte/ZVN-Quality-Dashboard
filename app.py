@@ -589,30 +589,83 @@ def empty_chart(text: str, height: int = 220) -> go.Figure:
     return layout(fig, height, dict(l=5, r=5, t=5, b=5))
 
 
-def bar_chart(series: pd.Series, color: str, total: float, empty_text: str = "No rejected quantity") -> go.Figure:
+def _wrap_chart_label(text: object, max_chars: int = 22, max_lines: int = 2) -> str:
+    """Wrap long chart labels without cutting important vendor/item text."""
+    raw = str(text).strip()
+    if len(raw) <= max_chars:
+        return raw
+
+    # Add sensible break opportunities around punctuation first.
+    prepared = re.sub(r"\s+", " ", raw)
+    prepared = re.sub(r"(?<=[,./&-])(?=[A-Za-z0-9])", " ", prepared)
+    words = prepared.split()
+
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if len(trial) <= max_chars or not current:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+            if len(lines) >= max_lines - 1:
+                break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+
+    # A single unbroken company name still needs a safe split.
+    if len(lines) == 1 and len(lines[0]) > max_chars:
+        value = lines[0]
+        lines = [value[:max_chars], value[max_chars:max_chars * 2]]
+
+    return "<br>".join(lines[:max_lines])
+
+
+def bar_chart(
+    series: pd.Series,
+    color: str,
+    total: float,
+    empty_text: str = "No rejected quantity",
+    *,
+    wrap_labels: bool = False,
+) -> go.Figure:
     s = series.head(5).sort_values(ascending=True)
     if s.empty:
         return empty_chart(empty_text, 430)
     labels = [f"{value:,.0f} ({value / total:.2%})" if total else f"{value:,.0f}" for value in s.values]
+    original_labels = [str(x) for x in s.index]
+    display_labels = [
+        _wrap_chart_label(x, max_chars=20, max_lines=2) if wrap_labels else str(x)
+        for x in s.index
+    ]
     fig = go.Figure(
         go.Bar(
             x=s.values,
-            y=s.index,
+            y=original_labels,
+            customdata=original_labels,
             orientation="h",
             marker=dict(color=color, line=dict(color="rgba(0,0,0,0.12)", width=1.0)),
             text=labels,
             textposition="outside",
             cliponaxis=False,
             textfont=dict(size=16, color=TEXT, family="Arial Black"),
-            hovertemplate="%{y}<br>%{x:,.0f} pcs<extra></extra>",
+            hovertemplate="%{customdata}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
-    max_label = max((len(str(x)) for x in s.index), default=10)
-    left_margin = min(300, max(145, max_label * 8 + 28))
+    max_label = max((len(str(x)) for x in original_labels), default=10)
+    left_margin = min(340, max(155, (20 if wrap_labels else max_label) * 8 + 35))
     layout(fig, 470, dict(l=left_margin, r=125, t=20, b=64))
     fig.update_layout(showlegend=False, paper_bgcolor="white", plot_bgcolor="white")
     fig.update_xaxes(title=dict(text="PCS", font=dict(size=17, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=14, color=TEXT, family="Arial Black"))
-    fig.update_yaxes(automargin=True, tickfont=dict(size=16, color=TEXT, family="Arial Black"), showgrid=False)
+    fig.update_yaxes(
+        automargin=True,
+        tickfont=dict(size=15 if wrap_labels else 16, color=TEXT, family="Arial Black"),
+        showgrid=False,
+        tickmode="array" if wrap_labels else "auto",
+        tickvals=original_labels if wrap_labels else None,
+        ticktext=display_labels if wrap_labels else None,
+    )
     return fig
 
 
@@ -666,7 +719,8 @@ def figure_png(fig: go.Figure, width: int = 1500, height: int = 850) -> bytes:
         ax.axis("off")
 
     elif horizontal is not None:
-        labels = [str(x) for x in horizontal.y]
+        ticktext = _safe_list(getattr(getattr(fig.layout, "yaxis", None), "ticktext", None))
+        labels = [str(x).replace("<br>", "\n") for x in (ticktext if ticktext else horizontal.y)]
         values = np.asarray(list(horizontal.x), dtype=float)
         color = getattr(getattr(horizontal, "marker", None), "color", NAVY_MID)
         positions = np.arange(len(labels))
@@ -932,7 +986,8 @@ def _export_chart_png(fig: go.Figure, width: int, height: int) -> bytes:
         mpl_fig.subplots_adjust(left=0.03, right=0.72, top=0.96, bottom=0.04)
 
     elif horizontal is not None:
-        labels = [str(x) for x in horizontal.y]
+        ticktext = _safe_list(getattr(getattr(fig.layout, "yaxis", None), "ticktext", None))
+        labels = [str(x).replace("<br>", "\n") for x in (ticktext if ticktext else horizontal.y)]
         values = np.asarray(list(horizontal.x), dtype=float)
         color = getattr(getattr(horizontal, "marker", None), "color", NAVY_MID)
         positions = np.arange(len(labels))
@@ -1450,6 +1505,25 @@ with left:
     st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
+# Top item details shown inside the Disposition card.
+def _top_item_by_quantity(data: pd.DataFrame, quantity_col: str) -> tuple[str, float]:
+    ranked = (
+        data[data[c["item"]] != "(Blank)"]
+        .groupby(c["item"], dropna=False)[quantity_col]
+        .sum()
+        .sort_values(ascending=False)
+    )
+    ranked = ranked[ranked > 0]
+    if ranked.empty:
+        return "0", 0.0
+    return str(ranked.index[0]), float(ranked.iloc[0])
+
+
+top_accepted_item, top_accepted_item_qty = _top_item_by_quantity(filtered, c["approved"])
+top_rejected_item, top_rejected_item_qty = _top_item_by_quantity(filtered, c["rejected"])
+top_special_item, top_special_item_qty = _top_item_by_quantity(filtered, c["special"])
+
+
 with right:
     st.markdown('<div class="chart-card"><div class="chart-title">DISPOSITION</div>', unsafe_allow_html=True)
     disposition = pd.Series({
@@ -1484,14 +1558,36 @@ with right:
         )
         donut.add_annotation(
             text=f"<b>{rejected:,.0f}</b><br><span style='font-size:12px'>Total Defect</span>",
-            x=.5, y=.5, showarrow=False, font=dict(size=26, color=TEXT, family="Arial Black")
+            x=.34, y=.50, showarrow=False, font=dict(size=26, color=TEXT, family="Arial Black")
         )
+
+        detail_rows = [
+            ("TOP ACCEPTED ITEM", top_accepted_item, top_accepted_item_qty, GREEN, .70),
+            ("TOP REJECTED ITEM", top_rejected_item, top_rejected_item_qty, RED, .46),
+            ("TOP SPECIAL RELEASE", top_special_item, top_special_item_qty, ORANGE, .22),
+        ]
+        for detail_label, detail_item, detail_qty, detail_color, detail_y in detail_rows:
+            item_display = _wrap_chart_label(detail_item, max_chars=20, max_lines=2)
+            donut.add_annotation(
+                x=.735, y=detail_y, xref="paper", yref="paper",
+                xanchor="left", yanchor="middle", align="left", showarrow=False,
+                text=(
+                    f"<span style='font-size:11px'><b>{detail_label}</b></span><br>"
+                    f"<span style='color:{detail_color};font-size:14px'><b>{item_display}</b></span><br>"
+                    f"<span style='font-size:11px'>{detail_qty:,.0f} pcs</span>"
+                ),
+                font=dict(size=12, color=TEXT, family="Arial"),
+            )
+
         layout(donut, 500, dict(l=18, r=20, t=45, b=35))
         donut.update_layout(
-            legend=dict(orientation="v", y=.5, x=.78, xanchor="left", font=dict(size=14, color=TEXT, family="Arial Black")),
-            margin=dict(l=18, r=18, t=45, b=35),
+            legend=dict(
+                orientation="h", y=1.02, x=.02, xanchor="left",
+                font=dict(size=11, color=TEXT, family="Arial Black"),
+            ),
+            margin=dict(l=18, r=18, t=65, b=35),
         )
-        donut.update_traces(domain=dict(x=[.02, .70], y=[.02, .98]))
+        donut.update_traces(domain=dict(x=[.01, .66], y=[.03, .92]))
     st.plotly_chart(donut, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1632,7 +1728,13 @@ rank_specs = [
 ]
 rank_figures: list[tuple[str, go.Figure]] = []
 for rank_index, (column, title, series, color, chart_total, empty_text) in enumerate(rank_specs):
-    rank_fig = bar_chart(series, color, chart_total, empty_text)
+    rank_fig = bar_chart(
+        series,
+        color,
+        chart_total,
+        empty_text,
+        wrap_labels=(title == "TOP VENDORS BY REJECTED QTY"),
+    )
     rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
