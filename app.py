@@ -1747,23 +1747,29 @@ for rank_index, (column, title, series, color, chart_total, empty_text) in enume
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
-# FOOTER SUMMARY
+# FOOTER SUMMARY — FOLLOWS THE TOP-5 MONTH / WEEK FILTERS
 # ============================================================
-record_count = len(filtered)
-accepted_rate = approved / received if received else 0
-counter_count = filtered[c["counter"]].replace("(Blank)", pd.NA).nunique()
-if counter_count == 0:
-    counter_count = filtered[c["vendor"]].replace("(Blank)", pd.NA).nunique()
+# The six footer KPIs use exactly the same filtered dataset as the four
+# ranking charts above, including Month, Week, Vendor and Item selections.
+footer_received = float(rank_filtered[c["received"]].sum())
+footer_approved = float(rank_filtered[c["approved"]].sum())
+footer_rejected = float(rank_filtered[c["rejected"]].sum())
+footer_reject_rate = footer_rejected / footer_received if footer_received else 0.0
+footer_accepted_rate = footer_approved / footer_received if footer_received else 0.0
 
-supplier_ppm = (rejected / received * 1_000_000) if received else 0.0
+footer_counter_count = rank_filtered[c["counter"]].replace("(Blank)", pd.NA).nunique()
+if footer_counter_count == 0:
+    footer_counter_count = rank_filtered[c["vendor"]].replace("(Blank)", pd.NA).nunique()
+
+footer_supplier_ppm = (footer_rejected / footer_received * 1_000_000) if footer_received else 0.0
 
 summary = [
-    ("📦", "TOTAL RECEIVED", number(received), "PCS", ""),
-    ("✓", "TOTAL ACCEPTED", number(approved), pct(accepted_rate), "accepted"),
-    ("✕", "TOTAL REJECTED", number(rejected), pct(reject_rate), "rejected"),
-    ("%", "DEFECT RATE", pct(reject_rate), "Rejected / Received", "rate"),
-    ("👤", "TOTAL COUNTER", number(counter_count), "People / Suppliers", ""),
-    ("PPM", "SUPPLIER PPM", number(round(supplier_ppm)), "Rejected / Received × 1,000,000", "rate"),
+    ("📦", "TOTAL RECEIVED", number(footer_received), "PCS", ""),
+    ("✓", "TOTAL ACCEPTED", number(footer_approved), pct(footer_accepted_rate), "accepted"),
+    ("✕", "TOTAL REJECTED", number(footer_rejected), pct(footer_reject_rate), "rejected"),
+    ("%", "DEFECT RATE", pct(footer_reject_rate), "Rejected / Received", "rate"),
+    ("👤", "TOTAL COUNTER", number(footer_counter_count), "People / Suppliers", ""),
+    ("PPM", "SUPPLIER PPM", number(round(footer_supplier_ppm)), "Rejected / Received × 1,000,000", "rate"),
 ]
 footer_html = '<div class="summary-strip">'
 for icon, label, value, unit, value_class in summary:
