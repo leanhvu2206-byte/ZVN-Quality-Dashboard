@@ -1536,17 +1536,91 @@ insight_html = f"""
 st.markdown(insight_html, unsafe_allow_html=True)
 
 # ============================================================
-# RANKED CHARTS
+# RANKED CHARTS — INDEPENDENT MONTH / WEEK FILTERS
 # ============================================================
+# These two filters only control the three Top-5 charts below. They do not
+# change the KPI cards, Daily Performance chart, Disposition, or Insights.
+rank_filter_left, rank_filter_month_col, rank_filter_week_col = st.columns(
+    [3.2, 1.0, 1.0], gap="small"
+)
+with rank_filter_left:
+    st.markdown(
+        '<div style="height:100%;display:flex;align-items:end;padding:0 0 8px 3px;'
+        'font-size:14px;font-weight:800;color:#073B7A;letter-spacing:.25px">'
+        'TOP 5 CHART FILTER</div>',
+        unsafe_allow_html=True,
+    )
+
+rank_month_options = ["All"] + months
+rank_month_default = month if month in rank_month_options else "All"
+with rank_filter_month_col:
+    rank_month = st.selectbox(
+        "Month",
+        rank_month_options,
+        index=rank_month_options.index(rank_month_default),
+        key="rank_month_filter",
+    )
+
+rank_month_df = df.copy() if rank_month == "All" else df[df["Year-Month"] == rank_month].copy()
+rank_week_values = sorted(rank_month_df["Year-Week"].dropna().unique(), reverse=True)
+rank_week_options = ["(All)"] + rank_week_values
+rank_week_default = week if week in rank_week_options else "(All)"
+with rank_filter_week_col:
+    rank_week = st.selectbox(
+        "Week",
+        rank_week_options,
+        index=rank_week_options.index(rank_week_default),
+        key="rank_week_filter",
+    )
+
+rank_filtered = (
+    rank_month_df.copy()
+    if rank_week == "(All)"
+    else rank_month_df[rank_month_df["Year-Week"] == rank_week].copy()
+)
+
+# Keep the existing Vendor and Item selections active, while Month and Week
+# are independently controlled by the two filters immediately above.
+if vendor != "(All)":
+    rank_filtered = rank_filtered[rank_filtered[c["vendor"]] == vendor]
+if item != "(All)":
+    rank_filtered = rank_filtered[rank_filtered[c["item"]] == item]
+
+rank_rejected = float(rank_filtered[c["rejected"]].sum())
+rank_vendor_rej = (
+    rank_filtered[rank_filtered[c["vendor"]] != "(Blank)"]
+    .groupby(c["vendor"], dropna=False)[c["rejected"]]
+    .sum()
+    .sort_values(ascending=False)
+)
+rank_item_rej = (
+    rank_filtered[rank_filtered[c["item"]] != "(Blank)"]
+    .groupby(c["item"], dropna=False)[c["rejected"]]
+    .sum()
+    .sort_values(ascending=False)
+)
+rank_defect_rej = (
+    rank_filtered[rank_filtered[c["defect"]] != "(Blank)"]
+    .groupby(c["defect"], dropna=False)[c["rejected"]]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+# Do not display zero-quantity categories. When no rejects exist, bar_chart()
+# returns a clean white chart showing "No rejected quantity".
+rank_vendor_rej = rank_vendor_rej[rank_vendor_rej > 0].head(5)
+rank_item_rej = rank_item_rej[rank_item_rej > 0].head(5)
+rank_defect_rej = rank_defect_rej[rank_defect_rej > 0].head(5)
+
 rank_cols = st.columns(3, gap="small")
 rank_specs = [
-    (rank_cols[0], "TOP VENDORS BY REJECTED QTY", vendor_rej, "#1457B8"),
-    (rank_cols[1], "TOP ITEMS BY REJECTED QTY", item_rej, "#2474D8"),
-    (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", defect_rej, RED),
+    (rank_cols[0], "TOP VENDORS BY REJECTED QTY", rank_vendor_rej, "#1457B8"),
+    (rank_cols[1], "TOP ITEMS BY REJECTED QTY", rank_item_rej, "#2474D8"),
+    (rank_cols[2], "TOP DEFECTS BY REJECTED QTY", rank_defect_rej, RED),
 ]
 rank_figures: list[tuple[str, go.Figure]] = []
 for rank_index, (column, title, series, color) in enumerate(rank_specs):
-    rank_fig = bar_chart(series, color, rejected)
+    rank_fig = bar_chart(series, color, rank_rejected)
     rank_figures.append((title, rank_fig))
     with column:
         st.markdown(f'<div class="chart-card"><div class="chart-title">{title}</div>', unsafe_allow_html=True)
