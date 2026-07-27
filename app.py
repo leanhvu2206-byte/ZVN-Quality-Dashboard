@@ -124,7 +124,7 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 .insight-copy .insight-note {{font-size:14px;font-weight:700;color:#27364F;}}
 
 /* ---------- Bottom summary ---------- */
-.summary-strip {{display:grid;grid-template-columns:repeat(6,1fr);background:linear-gradient(100deg,{NAVY_DARK},{NAVY});color:white;border-radius:12px;padding:10px 6px;margin-top:5px;box-shadow:0 5px 14px rgba(4,30,72,.18);}}
+.summary-strip {{display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(100deg,{NAVY_DARK},{NAVY});color:white;border-radius:12px;padding:10px 6px;margin-top:5px;box-shadow:0 5px 14px rgba(4,30,72,.18);}}
 .summary-item {{display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.35);min-height:82px;padding:5px 10px;}}
 .summary-item:last-child {{border-right:0;}}
 .summary-icon {{width:50px;height:50px;min-width:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:white;color:{NAVY};font-size:24px;margin-right:11px;}}
@@ -132,6 +132,7 @@ div[data-testid="stPlotlyChart"] .main-svg text {{
 .summary-value {{font-size:27px;font-weight:900;line-height:1.05;margin-top:3px;white-space:nowrap;}}
 .summary-value.accepted {{color:#63D65E;}}
 .summary-value.rejected {{color:#FF4B3E;}}
+.summary-value.special {{color:#FFB000;}}
 .summary-value.rate {{color:#FFD21F;}}
 .summary-unit {{font-size:11.5px;color:#D8E5F8;margin-top:2px;}}
 .source-note {{text-align:center;font-size:10px;color:#667085;margin-top:4px;}}
@@ -166,9 +167,6 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .insights .insight-item:last-child .insight-label {{font-size:10px;line-height:1.1;}}
 .export-mode .insights .insight-item:last-child b {{font-size:13px;line-height:1.15;}}
 .export-mode .insights .insight-item:last-child .insight-note {{font-size:11px;line-height:1.2;}}
-.export-mode .summary-item:nth-child(4) .summary-label {{font-size:9px;line-height:1.05;}}
-.export-mode .summary-item:nth-child(4) .summary-value {{font-size:23px;line-height:1.0;}}
-.export-mode .summary-item:nth-child(4) .summary-unit {{font-size:9px;line-height:1.1;}}
 
 /* Stable wrapping for long vendor/item names and rate cards during export */
 .kpi.defect-rate > div:last-child,
@@ -1749,11 +1747,12 @@ for rank_index, (column, title, series, color, chart_total, empty_text) in enume
 # ============================================================
 # FOOTER SUMMARY — FOLLOWS THE TOP-5 MONTH / WEEK FILTERS
 # ============================================================
-# The six footer KPIs use exactly the same filtered dataset as the four
+# The seven footer KPIs use exactly the same filtered dataset as the four
 # ranking charts above, including Month, Week, Vendor and Item selections.
 footer_received = float(rank_filtered[c["received"]].sum())
 footer_approved = float(rank_filtered[c["approved"]].sum())
 footer_rejected = float(rank_filtered[c["rejected"]].sum())
+footer_special = float(rank_filtered[c["special"]].sum())
 footer_reject_rate = footer_rejected / footer_received if footer_received else 0.0
 footer_accepted_rate = footer_approved / footer_received if footer_received else 0.0
 
@@ -1767,6 +1766,7 @@ summary = [
     ("📦", "TOTAL RECEIVED", number(footer_received), "PCS", ""),
     ("✓", "TOTAL ACCEPTED", number(footer_approved), pct(footer_accepted_rate), "accepted"),
     ("✕", "TOTAL REJECTED", number(footer_rejected), pct(footer_reject_rate), "rejected"),
+    ("SR", "TOTAL SPECIAL RELEASED", number(footer_special), "PCS", "special"),
     ("%", "DEFECT RATE", pct(footer_reject_rate), "Rejected / Received", "rate"),
     ("👤", "TOTAL COUNTER", number(footer_counter_count), "People / Suppliers", ""),
     ("PPM", "SUPPLIER PPM", number(round(footer_supplier_ppm)), "Rejected / Received × 1,000,000", "rate"),
