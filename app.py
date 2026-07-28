@@ -398,14 +398,14 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .chart-card {{padding:3px 6px 2px!important;border-radius:8px!important;}}
 .export-mode div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;overflow:hidden!important;}}
 
-.export-mode .insights {{margin:4px 0!important;min-height:64px!important;padding:4px 7px!important;border-radius:9px!important;}}
-.export-mode .insight-head {{font-size:12px!important;line-height:1.08!important;}}
-.export-mode .insight-bulb {{width:32px!important;height:32px!important;min-width:32px!important;font-size:17px!important;margin-right:7px!important;}}
-.export-mode .insight-item {{padding:3px 8px!important;}}
-.export-mode .insight-copy {{gap:2px!important;font-size:9px!important;line-height:1.08!important;}}
-.export-mode .insight-copy .insight-label {{font-size:7px!important;line-height:1.05!important;}}
-.export-mode .insight-copy b {{font-size:9px!important;line-height:1.08!important;}}
-.export-mode .insight-copy .insight-note {{font-size:7px!important;line-height:1.08!important;}}
+.export-mode .insights {{margin:5px 0!important;min-height:78px!important;padding:6px 9px!important;border-radius:9px!important;}}
+.export-mode .insight-head {{font-size:16px!important;line-height:1.18!important;}}
+.export-mode .insight-bulb {{width:38px!important;height:38px!important;min-width:38px!important;font-size:20px!important;margin-right:9px!important;}}
+.export-mode .insight-item {{padding:5px 11px!important;}}
+.export-mode .insight-copy {{gap:4px!important;font-size:11px!important;line-height:1.18!important;}}
+.export-mode .insight-copy .insight-label {{font-size:10px!important;line-height:1.15!important;}}
+.export-mode .insight-copy b {{font-size:13px!important;line-height:1.18!important;}}
+.export-mode .insight-copy .insight-note {{font-size:10px!important;line-height:1.18!important;}}
 
 .export-mode .summary-strip {{padding:4px 3px!important;margin-top:4px!important;border-radius:9px!important;}}
 .export-mode .summary-item {{min-height:54px!important;padding:2px 4px!important;}}
@@ -499,14 +499,14 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 }}
 div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;overflow:visible!important;}}
 
-.insights {{margin:4px 0!important;min-height:66px!important;padding:4px 7px!important;border-radius:9px!important;}}
-.insight-head {{font-size:12px!important;line-height:1.08!important;}}
-.insight-bulb {{width:32px!important;height:32px!important;min-width:32px!important;font-size:17px!important;margin-right:7px!important;}}
-.insight-item {{padding:3px 8px!important;}}
-.insight-copy {{gap:2px!important;font-size:9px!important;line-height:1.08!important;}}
-.insight-copy .insight-label {{font-size:7px!important;line-height:1.05!important;}}
-.insight-copy b {{font-size:9px!important;line-height:1.08!important;}}
-.insight-copy .insight-note {{font-size:7px!important;line-height:1.08!important;}}
+.insights {{margin:5px 0!important;min-height:82px!important;padding:7px 10px!important;border-radius:9px!important;}}
+.insight-head {{font-size:16px!important;line-height:1.18!important;}}
+.insight-bulb {{width:38px!important;height:38px!important;min-width:38px!important;font-size:20px!important;margin-right:9px!important;}}
+.insight-item {{padding:5px 11px!important;}}
+.insight-copy {{gap:4px!important;font-size:11px!important;line-height:1.18!important;}}
+.insight-copy .insight-label {{font-size:10px!important;line-height:1.15!important;}}
+.insight-copy b {{font-size:13px!important;line-height:1.18!important;}}
+.insight-copy .insight-note {{font-size:10px!important;line-height:1.18!important;}}
 
 .summary-strip {{padding:6px 4px!important;margin-top:5px!important;border-radius:9px!important;}}
 .summary-item {{min-height:66px!important;padding:4px 6px!important;}}
