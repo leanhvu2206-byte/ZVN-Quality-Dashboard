@@ -56,7 +56,7 @@ st.markdown(
 /* ---------- Page ---------- */
 html, body, [class*="css"] {{font-family: Arial, Helvetica, sans-serif;}}
 .stApp {{background:{BG};}}
-.block-container {{max-width: 1720px; padding: 0.45rem 1.05rem 1.25rem;}}
+.block-container {{max-width: 1920px; min-width: 1500px; padding: 0.35rem 0.75rem 0.85rem;}}
 header[data-testid="stHeader"] {{height:0; background:transparent;}}
 #MainMenu, footer, div[data-testid="stToolbar"] {{visibility:hidden;}}
 [data-testid="stDecoration"] {{display:none;}}
@@ -312,6 +312,26 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
     line-height: 1.35 !important;
     text-rendering: geometricPrecision;
 }}
+
+/* ---------- Landscape dashboard / export ---------- */
+@media (min-width: 1200px) {{
+  .block-container {{max-width:1920px!important; min-width:1500px!important;}}
+  .chart-card {{padding:8px 10px 5px;}}
+  .insights {{margin:7px 0;padding:11px 13px;min-height:116px;}}
+  .summary-strip {{margin-top:4px;padding:7px 5px;}}
+  .summary-item {{min-height:70px;padding:4px 7px;}}
+}}
+.export-mode {{
+  width:1920px!important;
+  max-width:1920px!important;
+  min-width:1920px!important;
+  padding:8px 14px 12px!important;
+  box-sizing:border-box!important;
+}}
+.export-mode .chart-card {{padding:7px 9px 5px!important;}}
+.export-mode .insights {{margin:6px 0!important;min-height:112px!important;padding:10px 12px!important;}}
+.export-mode .summary-strip {{padding:7px 4px!important;margin-top:4px!important;}}
+.export-mode .summary-item {{min-height:68px!important;padding:3px 6px!important;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1819,7 +1839,7 @@ st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Chụp nguyên giao diện dashboard hiện tại thành một ảnh PNG chất lượng cao.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Xuất toàn bộ dashboard thành ảnh PNG khổ ngang Full HD 1920 × 1080.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -1841,7 +1861,7 @@ components.html(
     </style>
     <div class="export-wrap">
       <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
-      <div id="status">Ảnh sẽ chụp từ tiêu đề IQC QUALITY DASHBOARD đến ngay phía trên khu vực Export.</div>
+      <div id="status">Ảnh sẽ được xuất theo khổ ngang Full HD 1920 × 1080.</div>
     </div>
     <script>
     const btn = document.getElementById('exportBtn');
@@ -1879,6 +1899,8 @@ components.html(
         const endY = Math.max(startY + 100, endRect.top - containerRect.top);
 
         const scale = 2;
+        const exportWidth = 1920;
+        const exportHeight = 1080;
         const fullCanvas = await html2canvas(container, {
           scale: scale,
           useCORS: true,
@@ -1887,19 +1909,36 @@ components.html(
           logging: false,
           scrollX: 0,
           scrollY: -window.parent.scrollY,
-          windowWidth: Math.ceil(containerRect.width),
+          windowWidth: 1920,
           windowHeight: Math.ceil(doc.documentElement.scrollHeight)
         });
 
         const cropY = Math.round(startY * scale);
         const cropH = Math.round((endY - startY) * scale);
+        const cropped = document.createElement('canvas');
+        cropped.width = fullCanvas.width;
+        cropped.height = cropH;
+        const cropCtx = cropped.getContext('2d');
+        cropCtx.fillStyle = '#F2F5FA';
+        cropCtx.fillRect(0, 0, cropped.width, cropped.height);
+        cropCtx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
+
+        // Export as a fixed Full-HD landscape image (16:9).
+        // The full dashboard is scaled proportionally and centered.
         const output = document.createElement('canvas');
-        output.width = fullCanvas.width;
-        output.height = cropH;
+        output.width = exportWidth * scale;
+        output.height = exportHeight * scale;
         const ctx = output.getContext('2d');
         ctx.fillStyle = '#F2F5FA';
         ctx.fillRect(0, 0, output.width, output.height);
-        ctx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
+        const fitScale = Math.min(output.width / cropped.width, output.height / cropped.height);
+        const drawW = Math.round(cropped.width * fitScale);
+        const drawH = Math.round(cropped.height * fitScale);
+        const drawX = Math.round((output.width - drawW) / 2);
+        const drawY = Math.round((output.height - drawH) / 2);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(cropped, 0, 0, cropped.width, cropped.height, drawX, drawY, drawW, drawH);
 
         output.toBlob(blob => {
           const url = URL.createObjectURL(blob);
