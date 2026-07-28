@@ -363,6 +363,12 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode .summary-value {{font-size:19px!important;line-height:1.0!important;margin-top:2px!important;margin-bottom:1px!important;}}
 .export-mode .summary-unit {{font-size:7px!important;line-height:1.08!important;}}
 .export-mode div[data-testid="stSelectbox"] {{margin-bottom:0!important;}}
+/* Keep both KPI rows in the export and remove Plotly reserved blank space. */
+.export-mode .kpi-row,
+.export-mode .summary-strip {{display:grid!important;visibility:visible!important;opacity:1!important;}}
+.export-mode div[data-testid="stPlotlyChart"] {{min-height:0!important;margin-top:-2px!important;margin-bottom:-2px!important;overflow:visible!important;}}
+.export-mode div[data-testid="stPlotlyChart"] > div {{min-height:0!important;}}
+.export-mode div[data-testid="stVerticalBlock"] {{row-gap:.20rem!important;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1923,13 +1929,34 @@ components.html(
         // Compact Plotly charts to a native 16:9 dashboard height.
         // This changes layout height only; it does not stretch text or shapes.
         const plotlyCharts = Array.from(container.querySelectorAll('.js-plotly-plot'));
-        const originalChartHeights = plotlyCharts.map(el => el.style.height || '');
-        const compactHeights = [350, 350, 270, 270, 270, 270];
-        plotlyCharts.forEach((el, index) => {
-          const h = compactHeights[index] || 270;
-          el.style.height = `${h}px`;
+        const originalChartState = plotlyCharts.map(el => {
           const wrapper = el.closest('[data-testid="stPlotlyChart"]');
-          if (wrapper) wrapper.style.height = `${h}px`;
+          const parent = wrapper ? wrapper.parentElement : null;
+          return {
+            elementHeight: el.style.height || '',
+            wrapperHeight: wrapper ? wrapper.style.height || '' : '',
+            wrapperMinHeight: wrapper ? wrapper.style.minHeight || '' : '',
+            parentHeight: parent ? parent.style.height || '' : '',
+            parentMinHeight: parent ? parent.style.minHeight || '' : ''
+          };
+        });
+
+        // Use real layout heights rather than stretching the final screenshot.
+        // The first two charts stay large; the four ranking charts are compact.
+        const compactHeights = [330, 330, 245, 245, 245, 245];
+        plotlyCharts.forEach((el, index) => {
+          const h = compactHeights[index] || 245;
+          const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+          const parent = wrapper ? wrapper.parentElement : null;
+          el.style.height = `${h}px`;
+          if (wrapper) {
+            wrapper.style.height = `${h}px`;
+            wrapper.style.minHeight = '0px';
+          }
+          if (parent) {
+            parent.style.height = 'auto';
+            parent.style.minHeight = '0px';
+          }
           if (window.parent.Plotly && window.parent.Plotly.Plots) {
             window.parent.Plotly.relayout(el, {height: h});
             window.parent.Plotly.Plots.resize(el);
@@ -1985,26 +2012,20 @@ components.html(
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // Fit by width so the dashboard truly fills the landscape canvas.
-        // The export-mode CSS and chart heights above keep content near 1080px.
+        // Fit the COMPLETE dashboard with one uniform scale. This preserves
+        // the 5 KPI cards at the top and all 7 footer KPIs; nothing is cropped.
         const widthScale = output.width / cropped.width;
-        const drawWidth = output.width;
-        const drawHeight = Math.round(cropped.height * widthScale);
-        const drawX = 0;
-        const drawY = Math.max(0, Math.round((output.height - drawHeight) / 2));
-
-        if (drawHeight <= output.height) {
-          ctx.drawImage(cropped, 0, 0, cropped.width, cropped.height, drawX, drawY, drawWidth, drawHeight);
-        } else {
-          // Safety fallback: crop only the small vertical overflow, never squeeze text.
-          const sourceVisibleHeight = Math.round(output.height / widthScale);
-          const sourceY = Math.max(0, Math.round((cropped.height - sourceVisibleHeight) / 2));
-          ctx.drawImage(
-            cropped,
-            0, sourceY, cropped.width, sourceVisibleHeight,
-            0, 0, output.width, output.height
-          );
-        }
+        const heightScale = output.height / cropped.height;
+        const fitScale = Math.min(widthScale, heightScale);
+        const drawWidth = Math.round(cropped.width * fitScale);
+        const drawHeight = Math.round(cropped.height * fitScale);
+        const drawX = Math.round((output.width - drawWidth) / 2);
+        const drawY = Math.round((output.height - drawHeight) / 2);
+        ctx.drawImage(
+          cropped,
+          0, 0, cropped.width, cropped.height,
+          drawX, drawY, drawWidth, drawHeight
+        );
 
         output.toBlob(blob => {
           const url = URL.createObjectURL(blob);
@@ -2017,9 +2038,18 @@ components.html(
           setTimeout(() => URL.revokeObjectURL(url), 2000);
           container.classList.remove('export-mode');
           plotlyCharts.forEach((el, index) => {
-            el.style.height = originalChartHeights[index];
+            const state = originalChartState[index];
             const wrapper = el.closest('[data-testid="stPlotlyChart"]');
-            if (wrapper) wrapper.style.height = '';
+            const parent = wrapper ? wrapper.parentElement : null;
+            el.style.height = state.elementHeight;
+            if (wrapper) {
+              wrapper.style.height = state.wrapperHeight;
+              wrapper.style.minHeight = state.wrapperMinHeight;
+            }
+            if (parent) {
+              parent.style.height = state.parentHeight;
+              parent.style.minHeight = state.parentMinHeight;
+            }
             if (window.parent.Plotly && window.parent.Plotly.Plots) {
               window.parent.Plotly.Plots.resize(el);
             }
