@@ -1923,22 +1923,22 @@ components.html(
         cropCtx.fillRect(0, 0, cropped.width, cropped.height);
         cropCtx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
 
-        // Export as a fixed Full-HD landscape image (16:9).
-        // The full dashboard is scaled proportionally and centered.
+        // Export as a true Full-HD landscape image (16:9).
+        // Fill the whole 1920 x 1080 canvas so the dashboard does not remain
+        // as a narrow portrait block in the middle of the exported image.
         const output = document.createElement('canvas');
         output.width = exportWidth * scale;
         output.height = exportHeight * scale;
         const ctx = output.getContext('2d');
         ctx.fillStyle = '#F2F5FA';
         ctx.fillRect(0, 0, output.width, output.height);
-        const fitScale = Math.min(output.width / cropped.width, output.height / cropped.height);
-        const drawW = Math.round(cropped.width * fitScale);
-        const drawH = Math.round(cropped.height * fitScale);
-        const drawX = Math.round((output.width - drawW) / 2);
-        const drawY = Math.round((output.height - drawH) / 2);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(cropped, 0, 0, cropped.width, cropped.height, drawX, drawY, drawW, drawH);
+        ctx.drawImage(
+          cropped,
+          0, 0, cropped.width, cropped.height,
+          0, 0, output.width, output.height
+        );
 
         output.toBlob(blob => {
           const url = URL.createObjectURL(blob);
