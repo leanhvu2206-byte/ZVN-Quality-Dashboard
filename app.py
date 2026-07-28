@@ -423,6 +423,71 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
   .insight-item {{border-top:1px dashed #8D98A7;}}
   .summary-strip {{grid-template-columns:repeat(2,1fr);}}
 }}
+
+
+/* ===== Native 16:9 dashboard layout (screen and export) ===== */
+:root { --dash-width: 1600px; }
+.block-container {
+  width: var(--dash-width) !important;
+  max-width: var(--dash-width) !important;
+  min-width: var(--dash-width) !important;
+  padding: 6px 10px 10px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+.st-key-topbar {min-height:64px!important;padding:7px 14px 8px!important;margin-bottom:4px!important;border-radius:9px!important;}
+.dash-title {font-size:30px!important;line-height:1.05!important;letter-spacing:.8px!important;}
+.dash-title-icon {width:40px!important;height:40px!important;min-width:40px!important;font-size:21px!important;margin-right:8px!important;}
+.dash-subtitle {font-size:8px!important;margin:1px 0 0 48px!important;min-height:10px!important;}
+.st-key-topbar label {font-size:8px!important;}
+.st-key-topbar div[data-baseweb="select"] > div {min-height:29px!important;height:29px!important;font-size:10px!important;}
+
+.st-key-upload_panel {margin:0 0 3px!important;}
+.st-key-upload_panel details {min-height:28px!important;}
+.st-key-upload_panel summary {font-size:9px!important;padding:4px 8px!important;}
+.st-key-upload_panel details[open] {max-height:92px!important;overflow:auto!important;}
+
+.kpi-row {padding:4px 4px!important;margin-bottom:4px!important;border-radius:9px!important;}
+.kpi {min-height:72px!important;padding:5px 9px!important;}
+.kpi-icon {width:38px!important;height:38px!important;min-width:38px!important;font-size:18px!important;margin-right:8px!important;}
+.kpi-label {font-size:8px!important;line-height:1.08!important;margin-bottom:2px!important;}
+.kpi-value {font-size:21px!important;line-height:1.02!important;}
+.kpi.top-vendor .kpi-value,.kpi.top-item .kpi-value {font-size:12px!important;line-height:1.12!important;}
+.kpi-unit {font-size:7px!important;line-height:1.08!important;margin-top:2px!important;}
+
+.chart-card {padding:3px 6px 2px!important;border-radius:8px!important;}
+.chart-title {font-size:11px!important;padding:3px 12px!important;margin:0 0 1px 6px!important;min-width:168px!important;border-radius:5px!important;line-height:1.15!important;}
+div[data-testid="stPlotlyChart"] {margin:0!important;padding:0 2px!important;}
+
+.insights {margin:4px 0!important;min-height:66px!important;padding:4px 7px!important;border-radius:9px!important;}
+.insight-head {font-size:12px!important;line-height:1.08!important;}
+.insight-bulb {width:32px!important;height:32px!important;min-width:32px!important;font-size:17px!important;margin-right:7px!important;}
+.insight-item {padding:3px 8px!important;}
+.insight-copy {gap:2px!important;font-size:9px!important;line-height:1.08!important;}
+.insight-copy .insight-label {font-size:7px!important;line-height:1.05!important;}
+.insight-copy b {font-size:9px!important;line-height:1.08!important;}
+.insight-copy .insight-note {font-size:7px!important;line-height:1.08!important;}
+
+.summary-strip {padding:4px 3px!important;margin-top:4px!important;border-radius:9px!important;}
+.summary-item {min-height:54px!important;padding:2px 4px!important;}
+.summary-icon {width:34px!important;height:34px!important;min-width:34px!important;font-size:16px!important;margin-right:6px!important;}
+.summary-label {font-size:7px!important;line-height:1.05!important;}
+.summary-value {font-size:17px!important;line-height:1!important;margin:1px 0!important;}
+.summary-unit {font-size:6px!important;line-height:1.05!important;}
+
+div[data-testid="stVerticalBlock"] {row-gap:.10rem!important;}
+div[data-testid="stHorizontalBlock"] {gap:.45rem!important;}
+
+/* Export mode uses exactly the same geometry as the live dashboard. */
+.export-mode {
+  width:var(--dash-width)!important;
+  max-width:var(--dash-width)!important;
+  min-width:var(--dash-width)!important;
+  padding:6px 10px 10px!important;
+}
+.export-mode .st-key-upload_panel {display:none!important;}
+.export-mode .st-key-export_data_panel {display:none!important;}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -733,7 +798,7 @@ def bar_chart(
 ) -> go.Figure:
     s = series.head(5).sort_values(ascending=True)
     if s.empty:
-        return empty_chart(empty_text, 430)
+        return empty_chart(empty_text, 245)
     labels = [f"{value:,.0f} ({value / total:.2%})" if total else f"{value:,.0f}" for value in s.values]
     original_labels = [str(x) for x in s.index]
     display_labels = [
@@ -750,15 +815,15 @@ def bar_chart(
             text=labels,
             textposition="outside",
             cliponaxis=False,
-            textfont=dict(size=16, color=TEXT, family="Arial Black"),
+            textfont=dict(size=12, color=TEXT, family="Arial Black"),
             hovertemplate="%{customdata}<br>%{x:,.0f} pcs<extra></extra>",
         )
     )
     max_label = max((len(str(x)) for x in original_labels), default=10)
     left_margin = min(340, max(155, (20 if wrap_labels else max_label) * 8 + 35))
-    layout(fig, 470, dict(l=left_margin, r=125, t=20, b=64))
+    layout(fig, 245, dict(l=left_margin, r=105, t=8, b=42))
     fig.update_layout(showlegend=False, paper_bgcolor="white", plot_bgcolor="white")
-    fig.update_xaxes(title=dict(text="PCS", font=dict(size=17, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=14, color=TEXT, family="Arial Black"))
+    fig.update_xaxes(title=dict(text="PCS", font=dict(size=12, color=TEXT, family="Arial Black")), rangemode="tozero", tickfont=dict(size=14, color=TEXT, family="Arial Black"))
     fig.update_yaxes(
         automargin=True,
         tickfont=dict(size=15 if wrap_labels else 16, color=TEXT, family="Arial Black"),
@@ -1564,7 +1629,7 @@ with left:
         text=[f"{x:,.0f}" for x in monthly["Output"]],
         textposition="outside",
         cliponaxis=False,
-        textfont=dict(size=16, color=TEXT, family="Arial Black"),
+        textfont=dict(size=12, color=TEXT, family="Arial Black"),
         hovertemplate="%{x}<br>Output: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_bar(
@@ -1574,7 +1639,7 @@ with left:
         marker=dict(color=RED, line=dict(color="#B42318", width=1.1)),
         text=[f"{x:,.0f}" for x in monthly["Defect"]],
         textposition="outside",
-        textfont=dict(size=17, color=RED, family="Arial Black"),
+        textfont=dict(size=12, color=RED, family="Arial Black"),
         hovertemplate="%{x}<br>Defect: %{y:,.0f}<extra></extra>",
     )
     month_fig.add_trace(
@@ -1592,17 +1657,17 @@ with left:
             hovertemplate="%{x}<br>Defect rate: %{y:.2f}%<extra></extra>",
         )
     )
-    layout(month_fig, 500, dict(l=92, r=92, t=80, b=82))
+    layout(month_fig, 300, dict(l=72, r=72, t=48, b=54))
     month_fig.update_layout(
         barmode="group",
-        font=dict(family="Arial Black", size=18, color=TEXT),
-        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0, font=dict(size=17, color=TEXT, family="Arial Black")),
+        font=dict(family="Arial Black", size=13, color=TEXT),
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0, font=dict(size=12, color=TEXT, family="Arial Black")),
         uniformtext_minsize=13,
         uniformtext_mode="show",
-        yaxis=dict(title=dict(text="PCS", font=dict(size=18, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=17, color=TEXT, family="Arial Black"), range=[0, max(float(monthly["Output"].max()) * 1.20, 1)]),
-        yaxis2=dict(title=dict(text="%", font=dict(size=18, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=17, color=TEXT, family="Arial Black")),
+        yaxis=dict(title=dict(text="PCS", font=dict(size=13, color=TEXT, family="Arial Black")), gridcolor=GRID, tickfont=dict(size=12, color=TEXT, family="Arial Black"), range=[0, max(float(monthly["Output"].max()) * 1.20, 1)]),
+        yaxis2=dict(title=dict(text="%", font=dict(size=13, color=TEXT, family="Arial Black")), overlaying="y", side="right", ticksuffix="%", showgrid=False, rangemode="tozero", tickfont=dict(size=12, color=TEXT, family="Arial Black")),
     )
-    month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Label"]), tickfont=dict(size=17, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text=x_axis_title, font=dict(size=18, color=TEXT, family="Arial Black")))
+    month_fig.update_xaxes(type="category", categoryorder="array", categoryarray=list(monthly["Label"]), tickfont=dict(size=12, color=TEXT, family="Arial Black"), tickangle=0, title=dict(text=x_axis_title, font=dict(size=13, color=TEXT, family="Arial Black")))
     st.plotly_chart(month_fig, use_container_width=True, config={"displayModeBar": False, "displaylogo": False, "responsive": True})
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1636,7 +1701,7 @@ with right:
     })
     disposition = disposition[disposition > 0]
     if disposition.empty:
-        donut = empty_chart("No disposition data", 500)
+        donut = empty_chart("No disposition data", 300)
     else:
         colors = {
             "Accepted": GREEN,
@@ -1680,7 +1745,7 @@ with right:
                 font=dict(size=12, color=TEXT, family="Arial"),
             )
 
-        layout(donut, 500, dict(l=18, r=20, t=45, b=35))
+        layout(donut, 300, dict(l=12, r=12, t=38, b=18))
         donut.update_layout(
             legend=dict(
                 orientation="h", y=1.02, x=.02, xanchor="left",
@@ -1889,6 +1954,8 @@ for icon, label, value, unit, value_class in summary:
 footer_html += '</div>'
 st.markdown(footer_html, unsafe_allow_html=True)
 
+st.markdown('<div id="dashboard-capture-end"></div>', unsafe_allow_html=True)
+
 # ============================================================
 # EXPORT DATA
 # ============================================================
@@ -1917,8 +1984,6 @@ with st.container(key="export_data_panel"):
 # ============================================================
 # Capture the actual browser-rendered dashboard so the exported image keeps
 # exactly the same fonts, colors, spacing and chart layout as the web page.
-st.markdown('<div id="dashboard-capture-end"></div>', unsafe_allow_html=True)
-
 st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
