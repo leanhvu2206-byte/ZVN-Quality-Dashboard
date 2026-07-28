@@ -370,6 +370,52 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode div[data-testid="stPlotlyChart"] > div {{min-height:0!important;}}
 .export-mode div[data-testid="stVerticalBlock"] {{row-gap:.20rem!important;}}
 
+
+/* ---------- V17 professional balanced 16:9 export ---------- */
+.export-mode {{
+  width:1920px!important;
+  max-width:1920px!important;
+  min-width:1920px!important;
+  padding:6px 12px 8px!important;
+}}
+.export-mode .st-key-topbar {{min-height:62px!important;padding:6px 13px 7px!important;margin-bottom:4px!important;}}
+.export-mode .dash-title {{font-size:29px!important;line-height:1.04!important;letter-spacing:1px!important;}}
+.export-mode .dash-title-icon {{width:38px!important;height:38px!important;min-width:38px!important;font-size:20px!important;margin-right:8px!important;}}
+.export-mode .dash-subtitle {{font-size:8px!important;margin:1px 0 0 47px!important;min-height:10px!important;}}
+.export-mode .st-key-topbar div[data-baseweb="select"] > div {{min-height:28px!important;height:28px!important;font-size:10px!important;}}
+.export-mode .st-key-topbar label {{font-size:8px!important;}}
+
+.export-mode .kpi-row {{padding:3px 4px!important;margin:0 0 4px!important;border-radius:9px!important;}}
+.export-mode .kpi {{min-height:70px!important;padding:5px 9px!important;}}
+.export-mode .kpi-icon {{width:38px!important;height:38px!important;min-width:38px!important;font-size:18px!important;margin-right:8px!important;}}
+.export-mode .kpi-label {{font-size:8px!important;margin-bottom:2px!important;line-height:1.08!important;}}
+.export-mode .kpi-value {{font-size:20px!important;line-height:1.02!important;}}
+.export-mode .kpi-unit {{font-size:7px!important;margin-top:2px!important;line-height:1.08!important;}}
+.export-mode .kpi.top-vendor .kpi-value,
+.export-mode .kpi.top-item .kpi-value {{font-size:12px!important;line-height:1.12!important;}}
+
+.export-mode .chart-title {{font-size:11px!important;padding:3px 12px!important;margin:0 0 1px 6px!important;min-width:168px!important;border-radius:5px!important;}}
+.export-mode .chart-card {{padding:3px 6px 2px!important;border-radius:8px!important;}}
+.export-mode div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;overflow:hidden!important;}}
+
+.export-mode .insights {{margin:4px 0!important;min-height:64px!important;padding:4px 7px!important;border-radius:9px!important;}}
+.export-mode .insight-head {{font-size:12px!important;line-height:1.08!important;}}
+.export-mode .insight-bulb {{width:32px!important;height:32px!important;min-width:32px!important;font-size:17px!important;margin-right:7px!important;}}
+.export-mode .insight-item {{padding:3px 8px!important;}}
+.export-mode .insight-copy {{gap:2px!important;font-size:9px!important;line-height:1.08!important;}}
+.export-mode .insight-copy .insight-label {{font-size:7px!important;line-height:1.05!important;}}
+.export-mode .insight-copy b {{font-size:9px!important;line-height:1.08!important;}}
+.export-mode .insight-copy .insight-note {{font-size:7px!important;line-height:1.08!important;}}
+
+.export-mode .summary-strip {{padding:4px 3px!important;margin-top:4px!important;border-radius:9px!important;}}
+.export-mode .summary-item {{min-height:54px!important;padding:2px 4px!important;}}
+.export-mode .summary-icon {{width:34px!important;height:34px!important;min-width:34px!important;font-size:16px!important;margin-right:6px!important;}}
+.export-mode .summary-label {{font-size:7px!important;line-height:1.05!important;}}
+.export-mode .summary-value {{font-size:17px!important;line-height:1!important;margin:1px 0!important;}}
+.export-mode .summary-unit {{font-size:6px!important;line-height:1.05!important;}}
+.export-mode div[data-testid="stVerticalBlock"] {{row-gap:.10rem!important;}}
+.export-mode div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
+
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
   .kpi {{border-bottom:1px solid #E0E5EC;}}
@@ -1931,11 +1977,15 @@ components.html(
         const plotlyCharts = Array.from(container.querySelectorAll('.js-plotly-plot'));
         const originalChartState = plotlyCharts.map(el => {
           const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+          const host = wrapper ? wrapper.closest('[data-testid="stElementContainer"]') : null;
           const parent = wrapper ? wrapper.parentElement : null;
           return {
             elementHeight: el.style.height || '',
             wrapperHeight: wrapper ? wrapper.style.height || '' : '',
             wrapperMinHeight: wrapper ? wrapper.style.minHeight || '' : '',
+            hostHeight: host ? host.style.height || '' : '',
+            hostMinHeight: host ? host.style.minHeight || '' : '',
+            hostOverflow: host ? host.style.overflow || '' : '',
             parentHeight: parent ? parent.style.height || '' : '',
             parentMinHeight: parent ? parent.style.minHeight || '' : ''
           };
@@ -1943,18 +1993,24 @@ components.html(
 
         // Use real layout heights rather than stretching the final screenshot.
         // The first two charts stay large; the four ranking charts are compact.
-        const compactHeights = [330, 330, 245, 245, 245, 245];
+        const compactHeights = [285, 285, 225, 225, 225, 225];
         plotlyCharts.forEach((el, index) => {
           const h = compactHeights[index] || 245;
           const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+          const host = wrapper ? wrapper.closest('[data-testid="stElementContainer"]') : null;
           const parent = wrapper ? wrapper.parentElement : null;
           el.style.height = `${h}px`;
           if (wrapper) {
             wrapper.style.height = `${h}px`;
             wrapper.style.minHeight = '0px';
           }
+          if (host) {
+            host.style.height = `${h}px`;
+            host.style.minHeight = '0px';
+            host.style.overflow = 'hidden';
+          }
           if (parent) {
-            parent.style.height = 'auto';
+            parent.style.height = `${h}px`;
             parent.style.minHeight = '0px';
           }
           if (window.parent.Plotly && window.parent.Plotly.Plots) {
@@ -2020,7 +2076,8 @@ components.html(
         const drawWidth = Math.round(cropped.width * fitScale);
         const drawHeight = Math.round(cropped.height * fitScale);
         const drawX = Math.round((output.width - drawWidth) / 2);
-        const drawY = Math.round((output.height - drawHeight) / 2);
+        // Top-align with a small professional margin; avoids a floating dashboard.
+        const drawY = Math.max(8 * scale, Math.round((output.height - drawHeight) * 0.18));
         ctx.drawImage(
           cropped,
           0, 0, cropped.width, cropped.height,
@@ -2040,11 +2097,17 @@ components.html(
           plotlyCharts.forEach((el, index) => {
             const state = originalChartState[index];
             const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+            const host = wrapper ? wrapper.closest('[data-testid="stElementContainer"]') : null;
             const parent = wrapper ? wrapper.parentElement : null;
             el.style.height = state.elementHeight;
             if (wrapper) {
               wrapper.style.height = state.wrapperHeight;
               wrapper.style.minHeight = state.wrapperMinHeight;
+            }
+            if (host) {
+              host.style.height = state.hostHeight;
+              host.style.minHeight = state.hostMinHeight;
+              host.style.overflow = state.hostOverflow;
             }
             if (parent) {
               parent.style.height = state.parentHeight;
