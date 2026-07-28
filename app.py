@@ -330,8 +330,39 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 }}
 .export-mode .chart-card {{padding:7px 9px 5px!important;}}
 .export-mode .insights {{margin:6px 0!important;min-height:112px!important;padding:10px 12px!important;}}
-.export-mode .summary-strip {{padding:7px 4px!important;margin-top:4px!important;}}
-.export-mode .summary-item {{min-height:68px!important;padding:3px 6px!important;}}
+.export-mode .summary-strip {{padding:5px 4px!important;margin-top:3px!important;}}
+.export-mode .summary-item {{min-height:58px!important;padding:2px 5px!important;}}
+
+/* Native 16:9 export: compact vertically instead of shrinking the whole page */
+.export-mode .st-key-upload_panel {{display:none!important;}}
+.export-mode .st-key-export_data_panel {{display:none!important;}}
+.export-mode .st-key-topbar {{min-height:68px!important;padding:7px 14px 8px!important;margin-bottom:4px!important;}}
+.export-mode .dash-title {{font-size:31px!important;line-height:1.02!important;}}
+.export-mode .dash-title-icon {{width:42px!important;height:42px!important;min-width:42px!important;font-size:22px!important;margin-right:9px!important;}}
+.export-mode .dash-subtitle {{font-size:9px!important;margin:2px 0 0 51px!important;min-height:12px!important;}}
+.export-mode .st-key-topbar div[data-baseweb="select"] > div {{min-height:30px!important;height:30px!important;font-size:11px!important;}}
+.export-mode .st-key-topbar label {{font-size:9px!important;}}
+.export-mode .kpi-row {{padding:5px 4px!important;margin-bottom:3px!important;}}
+.export-mode .kpi {{min-height:88px!important;padding:7px 10px!important;}}
+.export-mode .kpi-icon {{width:44px!important;height:44px!important;min-width:44px!important;font-size:21px!important;margin-right:9px!important;}}
+.export-mode .kpi-label {{font-size:9px!important;margin-bottom:3px!important;line-height:1.12!important;}}
+.export-mode .kpi-value {{font-size:23px!important;line-height:1.02!important;}}
+.export-mode .kpi-unit {{font-size:8px!important;margin-top:3px!important;line-height:1.12!important;}}
+.export-mode .chart-card {{padding:4px 7px 3px!important;}}
+.export-mode .chart-title {{font-size:12px!important;padding:4px 14px!important;margin:0 0 2px 7px!important;min-width:180px!important;line-height:1.15!important;}}
+.export-mode .insights {{margin:4px 0!important;min-height:78px!important;padding:6px 9px!important;}}
+.export-mode .insight-head {{font-size:14px!important;line-height:1.12!important;}}
+.export-mode .insight-bulb {{width:38px!important;height:38px!important;min-width:38px!important;font-size:20px!important;margin-right:8px!important;}}
+.export-mode .insight-item {{padding:5px 10px!important;}}
+.export-mode .insight-copy {{gap:3px!important;font-size:10px!important;line-height:1.12!important;}}
+.export-mode .insight-copy .insight-label {{font-size:8px!important;line-height:1.1!important;}}
+.export-mode .insight-copy b {{font-size:10px!important;line-height:1.12!important;}}
+.export-mode .insight-copy .insight-note {{font-size:8px!important;line-height:1.12!important;}}
+.export-mode .summary-icon {{width:38px!important;height:38px!important;min-width:38px!important;font-size:18px!important;margin-right:7px!important;}}
+.export-mode .summary-label {{font-size:8px!important;line-height:1.08!important;}}
+.export-mode .summary-value {{font-size:19px!important;line-height:1.0!important;margin-top:2px!important;margin-bottom:1px!important;}}
+.export-mode .summary-unit {{font-size:7px!important;line-height:1.08!important;}}
+.export-mode div[data-testid="stSelectbox"] {{margin-bottom:0!important;}}
 
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
@@ -1809,24 +1840,25 @@ st.markdown(footer_html, unsafe_allow_html=True)
 # ============================================================
 # EXPORT DATA
 # ============================================================
-export_data_col, export_note_col = st.columns([1.1, 4.9], gap="small")
-with export_data_col:
-    st.download_button(
-        "⬇️ EXPORT DATA",
-        filtered.to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"IQC_filtered_{month}_{week}.csv",
-        mime="text/csv",
-        use_container_width=True,
-        key="export_data_main",
-    )
-with export_note_col:
-    st.markdown(
-        '<div style="height:42px;display:flex;align-items:center;padding:0 14px;'
-        'background:#FFFFFF;border:1px solid #C8D3E1;border-radius:8px;'
-        'font-size:13px;font-weight:700;color:#425466">'
-        'Xuất toàn bộ dữ liệu đang được lọc trên dashboard.</div>',
-        unsafe_allow_html=True,
-    )
+with st.container(key="export_data_panel"):
+    export_data_col, export_note_col = st.columns([1.1, 4.9], gap="small")
+    with export_data_col:
+        st.download_button(
+            "⬇️ EXPORT DATA",
+            filtered.to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"IQC_filtered_{month}_{week}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="export_data_main",
+        )
+    with export_note_col:
+        st.markdown(
+            '<div style="height:42px;display:flex;align-items:center;padding:0 14px;'
+            'background:#FFFFFF;border:1px solid #C8D3E1;border-radius:8px;'
+            'font-size:13px;font-weight:700;color:#425466">'
+            'Xuất toàn bộ dữ liệu đang được lọc trên dashboard.</div>',
+            unsafe_allow_html=True,
+        )
 
 # ============================================================
 # ONE-BUTTON FULL DASHBOARD SCREENSHOT EXPORT
@@ -1887,6 +1919,23 @@ components.html(
         if (!container) throw new Error('Không tìm thấy vùng nội dung Streamlit.');
 
         container.classList.add('export-mode');
+
+        // Compact Plotly charts to a native 16:9 dashboard height.
+        // This changes layout height only; it does not stretch text or shapes.
+        const plotlyCharts = Array.from(container.querySelectorAll('.js-plotly-plot'));
+        const originalChartHeights = plotlyCharts.map(el => el.style.height || '');
+        const compactHeights = [350, 350, 270, 270, 270, 270];
+        plotlyCharts.forEach((el, index) => {
+          const h = compactHeights[index] || 270;
+          el.style.height = `${h}px`;
+          const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+          if (wrapper) wrapper.style.height = `${h}px`;
+          if (window.parent.Plotly && window.parent.Plotly.Plots) {
+            window.parent.Plotly.relayout(el, {height: h});
+            window.parent.Plotly.Plots.resize(el);
+          }
+        });
+
         if (doc.fonts && doc.fonts.ready) {
           await doc.fonts.ready;
         }
@@ -1936,20 +1985,26 @@ components.html(
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        const fitScale = Math.min(
-          output.width / cropped.width,
-          output.height / cropped.height
-        );
-        const drawWidth = Math.round(cropped.width * fitScale);
-        const drawHeight = Math.round(cropped.height * fitScale);
-        const drawX = Math.round((output.width - drawWidth) / 2);
-        const drawY = Math.round((output.height - drawHeight) / 2);
+        // Fit by width so the dashboard truly fills the landscape canvas.
+        // The export-mode CSS and chart heights above keep content near 1080px.
+        const widthScale = output.width / cropped.width;
+        const drawWidth = output.width;
+        const drawHeight = Math.round(cropped.height * widthScale);
+        const drawX = 0;
+        const drawY = Math.max(0, Math.round((output.height - drawHeight) / 2));
 
-        ctx.drawImage(
-          cropped,
-          0, 0, cropped.width, cropped.height,
-          drawX, drawY, drawWidth, drawHeight
-        );
+        if (drawHeight <= output.height) {
+          ctx.drawImage(cropped, 0, 0, cropped.width, cropped.height, drawX, drawY, drawWidth, drawHeight);
+        } else {
+          // Safety fallback: crop only the small vertical overflow, never squeeze text.
+          const sourceVisibleHeight = Math.round(output.height / widthScale);
+          const sourceY = Math.max(0, Math.round((cropped.height - sourceVisibleHeight) / 2));
+          ctx.drawImage(
+            cropped,
+            0, sourceY, cropped.width, sourceVisibleHeight,
+            0, 0, output.width, output.height
+          );
+        }
 
         output.toBlob(blob => {
           const url = URL.createObjectURL(blob);
@@ -1961,6 +2016,14 @@ components.html(
           a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 2000);
           container.classList.remove('export-mode');
+          plotlyCharts.forEach((el, index) => {
+            el.style.height = originalChartHeights[index];
+            const wrapper = el.closest('[data-testid="stPlotlyChart"]');
+            if (wrapper) wrapper.style.height = '';
+            if (window.parent.Plotly && window.parent.Plotly.Plots) {
+              window.parent.Plotly.Plots.resize(el);
+            }
+          });
           status.textContent = 'Đã tạo ảnh. File đang được tải về máy.';
           btn.disabled = false;
           btn.textContent = '⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH';
