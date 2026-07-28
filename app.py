@@ -606,6 +606,62 @@ div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
 .export-mode .insight-copy b {{font-size:18px!important;line-height:1.18!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;}}
 .export-mode .insight-copy .insight-note {{font-size:13px!important;line-height:1.22!important;white-space:normal!important;overflow-wrap:anywhere!important;}}
 
+
+
+/* ===== Export-only cleanup for Top-5 area and larger footer KPIs ===== */
+.export-mode .st-key-rank_filter_panel {
+    display:none!important;
+    height:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+}
+.export-mode .insights {
+    margin-bottom:3px!important;
+}
+.export-mode .summary-strip {
+    min-height:92px!important;
+    padding:8px 5px!important;
+    margin-top:5px!important;
+}
+.export-mode .summary-item {
+    min-height:80px!important;
+    padding:6px 8px!important;
+}
+.export-mode .summary-icon {
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    font-size:21px!important;
+    margin-right:9px!important;
+}
+.export-mode .summary-label {
+    font-size:10px!important;
+    line-height:1.12!important;
+    white-space:normal!important;
+}
+.export-mode .summary-value {
+    font-size:25px!important;
+    line-height:1.04!important;
+    margin:3px 0 2px!important;
+}
+.export-mode .summary-unit {
+    font-size:8px!important;
+    line-height:1.12!important;
+    white-space:normal!important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-label {
+    font-size:9.5px!important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-value {
+    font-size:24px!important;
+}
+.export-mode .summary-item.defect-rate-summary .summary-unit {
+    font-size:7.5px!important;
+    max-width:130px!important;
+}
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -1920,41 +1976,42 @@ st.markdown(insight_html, unsafe_allow_html=True)
 # ============================================================
 # These two filters only control the three Top-5 charts below. They do not
 # change the KPI cards, Daily Performance chart, Disposition, or Insights.
-# Add a small vertical gap so the filter title and Month/Week controls do not
-# sit too close to the Key Quality Insights panel above.
-st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-rank_filter_left, rank_filter_month_col, rank_filter_week_col = st.columns(
-    [3.2, 1.0, 1.0], gap="small"
-)
-with rank_filter_left:
-    st.markdown(
-        '<div style="height:100%;display:flex;align-items:end;padding:5px 0 5px 3px;'
-        'font-size:14px;font-weight:800;color:#073B7A;letter-spacing:.25px">'
-        'TOP 5 CHART FILTER</div>',
-        unsafe_allow_html=True,
+# Keep the independent Month / Week controls on screen, but wrap the whole
+# filter row in a keyed container so it can be hidden completely during export.
+with st.container(key="rank_filter_panel"):
+    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+    rank_filter_left, rank_filter_month_col, rank_filter_week_col = st.columns(
+        [3.2, 1.0, 1.0], gap="small"
     )
+    with rank_filter_left:
+        st.markdown(
+            '<div style="height:100%;display:flex;align-items:end;padding:5px 0 5px 3px;'
+            'font-size:14px;font-weight:800;color:#073B7A;letter-spacing:.25px">'
+            'TOP 5 CHART FILTER</div>',
+            unsafe_allow_html=True,
+        )
 
-rank_month_options = ["All"] + months
-rank_month_default = month if month in rank_month_options else "All"
-with rank_filter_month_col:
-    rank_month = st.selectbox(
-        "Month",
-        rank_month_options,
-        index=rank_month_options.index(rank_month_default),
-        key="rank_month_filter",
-    )
+    rank_month_options = ["All"] + months
+    rank_month_default = month if month in rank_month_options else "All"
+    with rank_filter_month_col:
+        rank_month = st.selectbox(
+            "Month",
+            rank_month_options,
+            index=rank_month_options.index(rank_month_default),
+            key="rank_month_filter",
+        )
 
-rank_month_df = df.copy() if rank_month == "All" else df[df["Year-Month"] == rank_month].copy()
-rank_week_values = sorted(rank_month_df["Year-Week"].dropna().unique(), reverse=True)
-rank_week_options = ["(All)"] + rank_week_values
-rank_week_default = week if week in rank_week_options else "(All)"
-with rank_filter_week_col:
-    rank_week = st.selectbox(
-        "Week",
-        rank_week_options,
-        index=rank_week_options.index(rank_week_default),
-        key="rank_week_filter",
-    )
+    rank_month_df = df.copy() if rank_month == "All" else df[df["Year-Month"] == rank_month].copy()
+    rank_week_values = sorted(rank_month_df["Year-Week"].dropna().unique(), reverse=True)
+    rank_week_options = ["(All)"] + rank_week_values
+    rank_week_default = week if week in rank_week_options else "(All)"
+    with rank_filter_week_col:
+        rank_week = st.selectbox(
+            "Week",
+            rank_week_options,
+            index=rank_week_options.index(rank_week_default),
+            key="rank_week_filter",
+        )
 
 rank_filtered = (
     rank_month_df.copy()
