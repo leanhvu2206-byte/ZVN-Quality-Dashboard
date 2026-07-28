@@ -609,58 +609,58 @@ div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
 
 
 /* ===== Export-only cleanup for Top-5 area and larger footer KPIs ===== */
-.export-mode .st-key-rank_filter_panel {
+.export-mode .st-key-rank_filter_panel {{
     display:none!important;
     height:0!important;
     min-height:0!important;
     margin:0!important;
     padding:0!important;
     overflow:hidden!important;
-}
-.export-mode .insights {
+}}
+.export-mode .insights {{
     margin-bottom:3px!important;
-}
-.export-mode .summary-strip {
+}}
+.export-mode .summary-strip {{
     min-height:92px!important;
     padding:8px 5px!important;
     margin-top:5px!important;
-}
-.export-mode .summary-item {
+}}
+.export-mode .summary-item {{
     min-height:80px!important;
     padding:6px 8px!important;
-}
-.export-mode .summary-icon {
+}}
+.export-mode .summary-icon {{
     width:46px!important;
     height:46px!important;
     min-width:46px!important;
     font-size:21px!important;
     margin-right:9px!important;
-}
-.export-mode .summary-label {
+}}
+.export-mode .summary-label {{
     font-size:10px!important;
     line-height:1.12!important;
     white-space:normal!important;
-}
-.export-mode .summary-value {
+}}
+.export-mode .summary-value {{
     font-size:25px!important;
     line-height:1.04!important;
     margin:3px 0 2px!important;
-}
-.export-mode .summary-unit {
+}}
+.export-mode .summary-unit {{
     font-size:8px!important;
     line-height:1.12!important;
     white-space:normal!important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-label {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-label {{
     font-size:9.5px!important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-value {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-value {{
     font-size:24px!important;
-}
-.export-mode .summary-item.defect-rate-summary .summary-unit {
+}}
+.export-mode .summary-item.defect-rate-summary .summary-unit {{
     font-size:7.5px!important;
     max-width:130px!important;
-}
+}}
 
 </style>
 """,
