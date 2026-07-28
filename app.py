@@ -531,6 +531,81 @@ div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
 .export-mode .st-key-upload_panel {{display:none!important;}}
 .export-mode .st-key-export_data_panel {{display:none!important;}}
 
+
+
+/* ===== Larger Key Quality Insights with automatic wrapping ===== */
+.insights {{
+    min-height:118px!important;
+    padding:12px 14px!important;
+    grid-template-columns:1.08fr repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+}}
+.insight-head {{
+    font-size:23px!important;
+    line-height:1.18!important;
+    letter-spacing:.35px!important;
+    padding-right:16px!important;
+}}
+.insight-bulb {{
+    width:58px!important;
+    height:58px!important;
+    min-width:58px!important;
+    font-size:30px!important;
+    margin-right:13px!important;
+}}
+.insight-item {{
+    padding:10px 18px!important;
+    align-items:center!important;
+    overflow:hidden!important;
+}}
+.insight-copy {{
+    gap:7px!important;
+    font-size:16px!important;
+    line-height:1.28!important;
+    min-width:0!important;
+    width:100%!important;
+}}
+.insight-copy .insight-label {{
+    font-size:14px!important;
+    line-height:1.22!important;
+    letter-spacing:.35px!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+}}
+.insight-copy b {{
+    display:block!important;
+    max-width:100%!important;
+    font-size:21px!important;
+    line-height:1.18!important;
+    letter-spacing:.15px!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+}}
+.insight-copy .insight-note {{
+    display:block!important;
+    max-width:100%!important;
+    font-size:15px!important;
+    line-height:1.26!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+}}
+
+/* Keep the same readable sizing in the exported image. */
+.export-mode .insights {{
+    min-height:112px!important;
+    padding:10px 13px!important;
+}}
+.export-mode .insight-head {{font-size:21px!important;line-height:1.18!important;}}
+.export-mode .insight-bulb {{width:52px!important;height:52px!important;min-width:52px!important;font-size:27px!important;margin-right:11px!important;}}
+.export-mode .insight-item {{padding:8px 15px!important;overflow:hidden!important;}}
+.export-mode .insight-copy {{gap:6px!important;font-size:15px!important;line-height:1.24!important;}}
+.export-mode .insight-copy .insight-label {{font-size:13px!important;line-height:1.2!important;white-space:normal!important;overflow-wrap:anywhere!important;}}
+.export-mode .insight-copy b {{font-size:18px!important;line-height:1.18!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;}}
+.export-mode .insight-copy .insight-note {{font-size:13px!important;line-height:1.22!important;white-space:normal!important;overflow-wrap:anywhere!important;}}
+
 </style>
 """,
     unsafe_allow_html=True,
