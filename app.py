@@ -1839,7 +1839,7 @@ st.markdown(
     '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
     'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
     '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Xuất toàn bộ dashboard thành ảnh PNG khổ ngang Full HD 1920 × 1080.</div>'
+    '<div style="font-size:13px;font-weight:700;color:#425466">Xuất dashboard thành ảnh PNG khổ ngang Full HD 1920 × 1080, giữ đúng tỷ lệ chữ và biểu đồ.</div>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -1861,7 +1861,7 @@ components.html(
     </style>
     <div class="export-wrap">
       <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
-      <div id="status">Ảnh sẽ được xuất theo khổ ngang Full HD 1920 × 1080.</div>
+      <div id="status">Ảnh sẽ được xuất theo khổ ngang Full HD 1920 × 1080 và không làm nén chữ.</div>
     </div>
     <script>
     const btn = document.getElementById('exportBtn');
@@ -1923,9 +1923,10 @@ components.html(
         cropCtx.fillRect(0, 0, cropped.width, cropped.height);
         cropCtx.drawImage(fullCanvas, 0, cropY, fullCanvas.width, cropH, 0, 0, fullCanvas.width, cropH);
 
-        // Export as a true Full-HD landscape image (16:9).
-        // Fill the whole 1920 x 1080 canvas so the dashboard does not remain
-        // as a narrow portrait block in the middle of the exported image.
+        // Export to a 1920 x 1080 landscape canvas WITHOUT stretching text.
+        // Keep one uniform scale for both width and height, then center the
+        // dashboard. This prevents letters, icons and charts from becoming
+        // horizontally or vertically compressed.
         const output = document.createElement('canvas');
         output.width = exportWidth * scale;
         output.height = exportHeight * scale;
@@ -1934,10 +1935,20 @@ components.html(
         ctx.fillRect(0, 0, output.width, output.height);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+
+        const fitScale = Math.min(
+          output.width / cropped.width,
+          output.height / cropped.height
+        );
+        const drawWidth = Math.round(cropped.width * fitScale);
+        const drawHeight = Math.round(cropped.height * fitScale);
+        const drawX = Math.round((output.width - drawWidth) / 2);
+        const drawY = Math.round((output.height - drawHeight) / 2);
+
         ctx.drawImage(
           cropped,
           0, 0, cropped.width, cropped.height,
-          0, 0, output.width, output.height
+          drawX, drawY, drawWidth, drawHeight
         );
 
         output.toBlob(blob => {
