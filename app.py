@@ -416,6 +416,26 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .export-mode div[data-testid="stVerticalBlock"] {{row-gap:.10rem!important;}}
 .export-mode div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
 
+
+/* Keep all six chart headings fully visible on screen and in exported PNG. */
+.export-mode .chart-card {{overflow:visible!important;padding-top:6px!important;}}
+.export-mode .chart-title {{
+  position:relative!important;
+  z-index:30!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:27px!important;
+  box-sizing:border-box!important;
+  font-size:10.5px!important;
+  line-height:1.25!important;
+  padding:6px 13px!important;
+  margin:0 0 4px 6px!important;
+  min-width:185px!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+}}
+.export-mode div[data-testid="stPlotlyChart"] {{margin-top:0!important;overflow:visible!important;}}
 @media (max-width:1150px) {{
   .kpi-row {{grid-template-columns:repeat(2,1fr);}}
   .kpi {{border-bottom:1px solid #E0E5EC;}}
@@ -455,9 +475,29 @@ div[data-testid="stExpander"] details {{background:white;border:1px solid {BORDE
 .kpi.top-vendor .kpi-value,.kpi.top-item .kpi-value {{font-size:12px!important;line-height:1.12!important;}}
 .kpi-unit {{font-size:7px!important;line-height:1.08!important;margin-top:2px!important;}}
 
-.chart-card {{padding:3px 6px 2px!important;border-radius:8px!important;}}
-.chart-title {{font-size:11px!important;padding:3px 12px!important;margin:0 0 1px 6px!important;min-width:168px!important;border-radius:5px!important;line-height:1.15!important;}}
-div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;}}
+.chart-card {{
+  padding:6px 6px 3px!important;
+  border-radius:8px!important;
+  overflow:visible!important;
+}}
+.chart-title {{
+  position:relative!important;
+  z-index:20!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:28px!important;
+  box-sizing:border-box!important;
+  font-size:11px!important;
+  padding:6px 14px!important;
+  margin:0 0 5px 6px!important;
+  min-width:190px!important;
+  border-radius:6px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+}}
+div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;overflow:visible!important;}}
 
 .insights {{margin:4px 0!important;min-height:66px!important;padding:4px 7px!important;border-radius:9px!important;}}
 .insight-head {{font-size:12px!important;line-height:1.08!important;}}
