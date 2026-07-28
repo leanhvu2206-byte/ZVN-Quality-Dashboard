@@ -2000,42 +2000,9 @@ st.markdown(footer_html, unsafe_allow_html=True)
 st.markdown('<div id="dashboard-capture-end"></div>', unsafe_allow_html=True)
 
 # ============================================================
-# EXPORT DATA
+# EXPORT FULL DASHBOARD IMAGE
 # ============================================================
-with st.container(key="export_data_panel"):
-    export_data_col, export_note_col = st.columns([1.1, 4.9], gap="small")
-    with export_data_col:
-        st.download_button(
-            "⬇️ EXPORT DATA",
-            filtered.to_csv(index=False).encode("utf-8-sig"),
-            file_name=f"IQC_filtered_{month}_{week}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            key="export_data_main",
-        )
-    with export_note_col:
-        st.markdown(
-            '<div style="height:42px;display:flex;align-items:center;padding:0 14px;'
-            'background:#FFFFFF;border:1px solid #C8D3E1;border-radius:8px;'
-            'font-size:13px;font-weight:700;color:#425466">'
-            'Xuất toàn bộ dữ liệu đang được lọc trên dashboard.</div>',
-            unsafe_allow_html=True,
-        )
-
-# ============================================================
-# ONE-BUTTON FULL DASHBOARD SCREENSHOT EXPORT
-# ============================================================
-# Capture the actual browser-rendered dashboard so the exported image keeps
-# exactly the same fonts, colors, spacing and chart layout as the web page.
-st.markdown(
-    '<div style="margin-top:18px;padding:14px 18px;border:1px solid #C8D3E1;border-radius:12px;'
-    'background:#FFFFFF;box-shadow:0 4px 14px rgba(15,40,80,.08)">'
-    '<div style="font-size:20px;font-weight:900;color:#062B63;margin-bottom:4px">⬇️ EXPORT FULL REPORT</div>'
-    '<div style="font-size:13px;font-weight:700;color:#425466">Xuất dashboard thành ảnh PNG khổ ngang Full HD 1920 × 1080, giữ đúng tỷ lệ chữ và biểu đồ.</div>'
-    '</div>',
-    unsafe_allow_html=True,
-)
-
+# Only keep the single full-dashboard image export button.
 components.html(
     """
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -2049,11 +2016,11 @@ components.html(
       }
       .export-btn:hover { background:#0A56B5; }
       .export-btn:disabled { opacity:.65; cursor:wait; }
-      #status { margin-top:7px; color:#425466; font-size:12px; font-weight:700; text-align:center; }
+      #status { display:none; }
     </style>
     <div class="export-wrap">
       <button id="exportBtn" class="export-btn">⬇️ TẢI TOÀN BỘ DASHBOARD DẠNG HÌNH ẢNH</button>
-      <div id="status">Ảnh sẽ được xuất theo khổ ngang Full HD 1920 × 1080 và không làm nén chữ.</div>
+      <div id="status"></div>
     </div>
     <script>
     const btn = document.getElementById('exportBtn');
@@ -2242,7 +2209,7 @@ components.html(
     });
     </script>
     """,
-    height=88,
+    height=62,
     scrolling=False,
 )
 
