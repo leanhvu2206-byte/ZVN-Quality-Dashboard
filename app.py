@@ -1842,12 +1842,15 @@ st.markdown(insight_html, unsafe_allow_html=True)
 # ============================================================
 # These two filters only control the three Top-5 charts below. They do not
 # change the KPI cards, Daily Performance chart, Disposition, or Insights.
+# Add a small vertical gap so the filter title and Month/Week controls do not
+# sit too close to the Key Quality Insights panel above.
+st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
 rank_filter_left, rank_filter_month_col, rank_filter_week_col = st.columns(
     [3.2, 1.0, 1.0], gap="small"
 )
 with rank_filter_left:
     st.markdown(
-        '<div style="height:100%;display:flex;align-items:end;padding:0 0 8px 3px;'
+        '<div style="height:100%;display:flex;align-items:end;padding:5px 0 5px 3px;'
         'font-size:14px;font-weight:800;color:#073B7A;letter-spacing:.25px">'
         'TOP 5 CHART FILTER</div>',
         unsafe_allow_html=True,
