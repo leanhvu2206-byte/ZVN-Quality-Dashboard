@@ -508,12 +508,15 @@ div[data-testid="stPlotlyChart"] {{margin:0!important;padding:0 2px!important;ov
 .insight-copy b {{font-size:9px!important;line-height:1.08!important;}}
 .insight-copy .insight-note {{font-size:7px!important;line-height:1.08!important;}}
 
-.summary-strip {{padding:4px 3px!important;margin-top:4px!important;border-radius:9px!important;}}
-.summary-item {{min-height:54px!important;padding:2px 4px!important;}}
-.summary-icon {{width:34px!important;height:34px!important;min-width:34px!important;font-size:16px!important;margin-right:6px!important;}}
-.summary-label {{font-size:7px!important;line-height:1.05!important;}}
-.summary-value {{font-size:17px!important;line-height:1!important;margin:1px 0!important;}}
-.summary-unit {{font-size:6px!important;line-height:1.05!important;}}
+.summary-strip {{padding:6px 4px!important;margin-top:5px!important;border-radius:9px!important;}}
+.summary-item {{min-height:66px!important;padding:4px 6px!important;}}
+.summary-icon {{width:40px!important;height:40px!important;min-width:40px!important;font-size:19px!important;margin-right:8px!important;}}
+.summary-label {{font-size:9px!important;line-height:1.12!important;letter-spacing:.20px!important;}}
+.summary-value {{font-size:22px!important;line-height:1.02!important;margin:2px 0!important;}}
+.summary-unit {{font-size:7.5px!important;line-height:1.12!important;letter-spacing:.10px!important;}}
+.summary-item.defect-rate-summary .summary-label {{font-size:8.5px!important;}}
+.summary-item.defect-rate-summary .summary-value {{font-size:21px!important;}}
+.summary-item.defect-rate-summary .summary-unit {{font-size:7px!important;max-width:125px!important;}}
 
 div[data-testid="stVerticalBlock"] {{row-gap:.10rem!important;}}
 div[data-testid="stHorizontalBlock"] {{gap:.45rem!important;}}
